@@ -1,0 +1,49 @@
+# Environment
+.env
+.env.local
+
+# Qdrant local storage
+qdrant_data/
+
+# SQLite
+content.db
+*.db-journal
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Data (large, not tracked)
+data/fatwa.jsonl
+data/article.jsonl
+data/audio.jsonl
+data/discussion.jsonl
+data/speech.jsonl
+data/book.jsonl
+data/enriched_fatwas.jsonl
+data/quran_verses.json
+
+# Node (frontend)
+node_modules/
+.next/
+out/

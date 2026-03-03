@@ -1,0 +1,175 @@
+"""
+routes/content.py
+Non-fatwa content endpoints: articles, books, speeches, discussions.
+All served from SQLite.
+"""
+import json
+import math
+import sqlite3
+from typing import Optional
+
+from fastapi import APIRouter, Query
+
+from api.models import (
+    ArticleBrief,
+    BookItem,
+    DiscussionBrief,
+    PaginatedResponse,
+    SpeechBrief,
+)
+
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from config import settings
+
+router = APIRouter(prefix="/api", tags=["Content"])
+
+
+def get_db() -> sqlite3.Connection:
+    """Get SQLite connection."""
+    conn = sqlite3.connect(settings.content_db_path)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+# ──────────────────────────────── Articles ────────────────────────────────
+
+@router.get("/articles", response_model=PaginatedResponse)
+async def list_articles(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    category: Optional[str] = None,
+):
+    conn = get_db()
+    offset = (page - 1) * per_page
+
+    if category:
+        rows = conn.execute(
+            "SELECT * FROM articles WHERE categories LIKE ? ORDER BY id DESC LIMIT ? OFFSET ?",
+            (f'%{category}%', per_page, offset),
+        ).fetchall()
+        total = conn.execute(
+            "SELECT COUNT(*) FROM articles WHERE categories LIKE ?",
+            (f'%{category}%',),
+        ).fetchone()[0]
+    else:
+        rows = conn.execute(
+            "SELECT * FROM articles ORDER BY id DESC LIMIT ? OFFSET ?",
+            (per_page, offset),
+        ).fetchall()
+        total = conn.execute("SELECT COUNT(*) FROM articles").fetchone()[0]
+
+    conn.close()
+
+    items = [
+        ArticleBrief(
+            id=r["id"],
+            title=r["title"] or "",
+            text_preview=(r["text"] or "")[:300],
+            categories=json.loads(r["categories"]) if r["categories"] else [],
+            date=r["date"] or "",
+            source_ref=r["source_ref"] or "",
+        ).model_dump()
+        for r in rows
+    ]
+
+    return PaginatedResponse(
+        items=items,
+        total=total,
+        page=page,
+        per_page=per_page,
+        total_pages=math.ceil(total / per_page) if total > 0 else 0,
+    )
+
+
+# ──────────────────────────────── Books ────────────────────────────────
+
+@router.get("/books", response_model=list[BookItem])
+async def list_books():
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM books ORDER BY id").fetchall()
+    conn.close()
+
+    return [
+        BookItem(
+            id=r["id"],
+            title=r["title"] or "",
+            url=r["url"] or "",
+            pdf_url=r["pdf_url"] or "",
+        )
+        for r in rows
+    ]
+
+
+# ──────────────────────────────── Speeches ────────────────────────────────
+
+@router.get("/speeches", response_model=PaginatedResponse)
+async def list_speeches(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+):
+    conn = get_db()
+    offset = (page - 1) * per_page
+
+    rows = conn.execute(
+        "SELECT * FROM speeches ORDER BY id DESC LIMIT ? OFFSET ?",
+        (per_page, offset),
+    ).fetchall()
+    total = conn.execute("SELECT COUNT(*) FROM speeches").fetchone()[0]
+    conn.close()
+
+    items = [
+        SpeechBrief(
+            id=r["id"],
+            title=r["title"] or "",
+            text_preview=(r["text"] or "")[:300],
+            categories=json.loads(r["categories"]) if r["categories"] else [],
+            date=r["date"] or "",
+        ).model_dump()
+        for r in rows
+    ]
+
+    return PaginatedResponse(
+        items=items,
+        total=total,
+        page=page,
+        per_page=per_page,
+        total_pages=math.ceil(total / per_page) if total > 0 else 0,
+    )
+
+
+# ──────────────────────────────── Discussions ────────────────────────────────
+
+@router.get("/discussions", response_model=PaginatedResponse)
+async def list_discussions(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+):
+    conn = get_db()
+    offset = (page - 1) * per_page
+
+    rows = conn.execute(
+        "SELECT * FROM discussions ORDER BY id DESC LIMIT ? OFFSET ?",
+        (per_page, offset),
+    ).fetchall()
+    total = conn.execute("SELECT COUNT(*) FROM discussions").fetchone()[0]
+    conn.close()
+
+    items = [
+        DiscussionBrief(
+            id=r["id"],
+            title=r["title"] or "",
+            text_preview=(r["text"] or "")[:300],
+            categories=json.loads(r["categories"]) if r["categories"] else [],
+        ).model_dump()
+        for r in rows
+    ]
+
+    return PaginatedResponse(
+        items=items,
+        total=total,
+        page=page,
+        per_page=per_page,
+        total_pages=math.ceil(total / per_page) if total > 0 else 0,
+    )

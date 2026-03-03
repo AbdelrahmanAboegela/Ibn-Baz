@@ -1,0 +1,74 @@
+/** API client for communicating with FastAPI backend */
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
+    const res = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers: {
+            "Content-Type": "application/json",
+            ...options?.headers,
+        },
+    });
+
+    if (!res.ok) {
+        throw new Error(`API error: ${res.status} ${res.statusText}`);
+    }
+
+    return res.json();
+}
+
+// ── Fatwas ──
+export const api = {
+    fatwas: {
+        list: (page = 1, perPage = 20, category?: string, search?: string) => {
+            const params = new URLSearchParams({
+                page: String(page),
+                per_page: String(perPage),
+            });
+            if (category) params.set("category", category);
+            if (search) params.set("search", search);
+            return fetchApi<any>(`/api/fatwas?${params}`);
+        },
+
+        get: (id: number) => fetchApi<any>(`/api/fatwas/${id}`),
+
+        related: (id: number) => fetchApi<any>(`/api/fatwas/${id}/related`),
+
+        categories: () => fetchApi<string[]>("/api/fatwas/categories"),
+    },
+
+    // ── Content ──
+    articles: {
+        list: (page = 1, perPage = 20) =>
+            fetchApi<any>(`/api/articles?page=${page}&per_page=${perPage}`),
+    },
+
+    books: {
+        list: () => fetchApi<any[]>("/api/books"),
+    },
+
+    speeches: {
+        list: (page = 1, perPage = 20) =>
+            fetchApi<any>(`/api/speeches?page=${page}&per_page=${perPage}`),
+    },
+
+    discussions: {
+        list: (page = 1, perPage = 20) =>
+            fetchApi<any>(`/api/discussions?page=${page}&per_page=${perPage}`),
+    },
+
+    // ── Chat ──
+    chat: {
+        query: (query: string, topK = 5) =>
+            fetchApi<any>("/api/chat", {
+                method: "POST",
+                body: JSON.stringify({ query, top_k: topK }),
+            }),
+
+        streamUrl: () => `${API_BASE}/api/chat/stream`,
+    },
+
+    // ── Stats ──
+    stats: () => fetchApi<any>("/api/stats"),
+};
