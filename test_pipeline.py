@@ -76,10 +76,12 @@ def encode_url(url: str) -> str:
 _SOURCE_REF_PATTERNS = re.compile(
     r'('
     r'نشرت في\b'                             # نشرت في (published in ...)
+    r'|\bنشر في\b'                           # نشر في (past tense, no ت)
     r'|محاضرة ألقيت\b'                       # محاضرة ألقيت (lecture delivered at)
     r'|خطبة ألقيت\b'                         # خطبة ألقيت (sermon delivered at)
     r'|(?<=[.،؛\]\)])\s*\[\d+\]\s+[\u0600-\u06FF]'  # [N] after punctuation — real footnote
-    r'|\(مجموع فتاوى'                        # (مجموع فتاوى reference)
+    r'|\[\d+\]\s*[.،]?\s*\(?[\u0600-\u06FF]'   # [N] followed by optional ( then Arabic
+    r'|\(?مجموع فتاوى'                        # مجموع فتاوى with or without leading (
     r')'
 )
 
@@ -179,26 +181,47 @@ def scrape_fatwa(url: str) -> dict:
 
     # ── Question ──────────────────────────────────────────────────────────────
     # DOM: h2.article-title.article-title__question is OUTSIDE .article-content
-    # DOM variant A: h2.article-title__question contains the question text directly.
-    # DOM variant B: h2 is empty (just an icon); question text lives in <p> elements
-    #   that are direct children of article.fatwa, before .article-content.
-    # Fallback: if neither yields text, the title serves as the question.
+    # Question text appears in one of several DOM locations (tried in order):
+    #   A) h2 → B) sibling <p> → C) sibling <div> → D) inside .article-content
+    #   (No title fallback — empty question = extraction bug to investigate)
+    _strip_q = lambda t: re.sub(r'^(?:السؤال|س)\s*[：:]?\s*', '', t).strip()
+
+    question = ""
     q_el = r.css("h2.article-title__question")
-    raw_question = clean(
-        " ".join(q_el.css(":not(script):not(style)::text").getall())
-    ) if q_el else ""
-    # Variant B: sibling <p> elements directly inside article.fatwa (outside .article-content)
-    if not raw_question:
+    if q_el:
+        question = _strip_q(clean(
+            " ".join(q_el.css(":not(script):not(style)::text").getall())
+        ))
+    if not question:
         sibling_ps = r.css("article.fatwa > p")
-        raw_question = clean(" ".join(
+        raw = clean(" ".join(
             clean(" ".join(el.css(":not(script):not(style)::text").getall()))
             for el in sibling_ps
         ))
-    # Last resort fallback: title IS the question
-    if not raw_question:
-        raw_question = title
-    # Strip "السؤال:" / "س:" prefix
-    question = re.sub(r'^(?:السؤال|س)\s*[：:]?\s*', '', raw_question).strip()
+        question = _strip_q(raw)
+    if not question:
+        for el in r.css("article.fatwa > div"):
+            cls = " ".join(el.css("::attr(class)").getall())
+            if any(skip in cls for skip in ("article-content", "row", "audio")):
+                continue
+            txt = clean(" ".join(el.css(":not(script):not(style)::text").getall()))
+            txt = _strip_q(txt)
+            if txt:
+                question = txt
+                break
+    if not question:
+        content_parts = []
+        for el in r.css(".article-content > *:not(.footnotes)"):
+            txt = clean(" ".join(el.css(":not(script):not(style)::text").getall()))
+            if re.match(r'^(?:الجواب|ج)\s*[：:]', txt):
+                break
+            content_parts.append(txt)
+        if content_parts:
+            question = _strip_q(" ".join(content_parts))
+    # No title fallback — leave empty so missing questions are visible
+    if not question:
+        import logging
+        logging.warning(f"No question extracted from DOM for {url}")
 
     # ── Source reference (footnotes) ──────────────────────────────────────────
     # DOM: .article-content .footnotes li contains publication refs like
@@ -210,7 +233,6 @@ def scrape_fatwa(url: str) -> dict:
     source_ref = "  ".join(p for p in footnote_items if p)
 
     # ── Answer body (exclude .footnotes) ─────────────────────────────────────
-    # ── Answer body (exclude .footnotes) ─────────────────────────────────────
     # First try child elements (covers most fatwas with <p> tags)
     answer_text = clean(" ".join(
         clean(" ".join(el.css(":not(script):not(style)::text").getall()))
@@ -221,6 +243,14 @@ def scrape_fatwa(url: str) -> dict:
     if not answer_text:
         answer_text = clean(" ".join(r.css(".article-content::text").getall()))
     answer_stripped = re.sub(r'^(?:الجواب|ج)\s*[：:]?\s*', '', answer_text).strip()
+    # Some fatwas have nested "الجواب: ج:" — strip repeatedly
+    while re.match(r'^(?:الجواب|ج)\s*[：:]?\s*', answer_stripped):
+        answer_stripped = re.sub(r'^(?:الجواب|ج)\s*[：:]?\s*', '', answer_stripped).strip()
+
+    # Strip any trailing inline source ref that leaks through from the last <p>
+    answer_stripped, _inline_ref = extract_source_ref(answer_stripped)
+    if not source_ref and _inline_ref:
+        source_ref = _inline_ref
 
     # Split into direct reply + nested س/ج follow-up pairs
     first_followup = re.search(r'\bس\s*[：:]', answer_stripped)
