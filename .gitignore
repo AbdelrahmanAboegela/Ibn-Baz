@@ -9,6 +9,17 @@ qdrant_data/
 content.db
 *.db-journal
 
+# Data & Outputs (Scraper)
+output/
+database/
+files/
+crawl_state/
+progress.json
+*.jsonl
+*.json
+*.csv
+*.log
+
 # Python
 __pycache__/
 *.py[cod]
@@ -29,7 +40,7 @@ env/
 *.swp
 *.swo
 
-# OS
+# OS Files
 Thumbs.db
 .DS_Store
 
