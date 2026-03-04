@@ -1,9 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+    Sheet,
+    SheetContent,
+    SheetTitle,
+    SheetTrigger,
+} from "@/components/ui/sheet";
 
 const navItems = [
     { href: "/", label: "الرئيسية" },
@@ -23,8 +29,14 @@ export function Header() {
             <div className="container mx-auto flex h-16 items-center justify-between px-4">
                 {/* Logo */}
                 <Link href="/" className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold text-lg font-[family-name:var(--font-amiri)]">
-                        بز
+                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg">
+                        <Image
+                            src="/ibn-baz.png"
+                            alt="الشيخ ابن باز"
+                            fill
+                            className="object-cover"
+                            priority
+                        />
                     </div>
                     <div className="hidden sm:block">
                         <h1 className="text-lg font-bold leading-tight">مكتبة ابن باز</h1>
@@ -48,10 +60,7 @@ export function Header() {
                 {/* Chat CTA */}
                 <div className="hidden md:flex items-center gap-2">
                     <Link href="/chat">
-                        <Button
-                            variant="default"
-                            className="bg-emerald-600 hover:bg-emerald-700"
-                        >
+                        <Button variant="default" className="bg-emerald-600 hover:bg-emerald-700">
                             💬 اسأل الشيخ
                         </Button>
                     </Link>
@@ -60,13 +69,15 @@ export function Header() {
                 {/* Mobile Menu */}
                 <Sheet open={open} onOpenChange={setOpen}>
                     <SheetTrigger asChild className="md:hidden">
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" aria-label="فتح القائمة">
                             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                             </svg>
                         </Button>
                     </SheetTrigger>
                     <SheetContent side="right" className="w-72">
+                        {/* Required for accessibility — visually hidden via sr-only */}
+                        <SheetTitle className="sr-only">القائمة الرئيسية</SheetTitle>
                         <nav className="flex flex-col gap-2 mt-8">
                             {navItems.map((item) => (
                                 <Link

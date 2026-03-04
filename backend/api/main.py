@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from api.routes import fatwas, content, chat, stats
 
@@ -23,6 +24,10 @@ app = FastAPI(
 )
 
 # ──────────────────────────────── CORS ────────────────────────────────
+
+# ──────────────────────────────── Middleware ────────────────────────────────
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)  # compress responses > 1 KB
 
 app.add_middleware(
     CORSMiddleware,

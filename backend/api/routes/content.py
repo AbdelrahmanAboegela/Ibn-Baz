@@ -27,9 +27,14 @@ router = APIRouter(prefix="/api", tags=["Content"])
 
 
 def get_db() -> sqlite3.Connection:
-    """Get SQLite connection."""
-    conn = sqlite3.connect(settings.content_db_path)
+    """Open SQLite with WAL mode for fast concurrent reads."""
+    conn = sqlite3.connect(str(settings.content_db_path), check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    # WAL mode: much faster concurrent reads, no blocking writes
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    conn.execute("PRAGMA cache_size=10000")   # ~40 MB page cache
+    conn.execute("PRAGMA temp_store=MEMORY")
     return conn
 
 
