@@ -1,9 +1,10 @@
 """
 generator.py
-Direct Groq API generation — no structured JSON output so the model can write
-a full, untruncated Arabic answer. PydanticAI was causing truncation because
-the small model had to simultaneously generate a long answer AND close the JSON.
+Direct Groq API generation with a strict Islamic scholarly prompt.
+Uses retrieved fatwas, Quran citations, and context to generate
+well-cited Arabic answers in the style of Sheikh Ibn Baz (رحمه الله).
 """
+import re
 import os
 import sys
 from dataclasses import dataclass
@@ -16,7 +17,7 @@ from config import settings
 from api.models import RAGResponse
 
 
-# ──────────────────────────────── Dependency type ────────────────────────────────
+# ─── Dependency type ─────────────────────────────────────────────────────────
 
 @dataclass
 class RetrievalContext:
@@ -27,59 +28,107 @@ class RetrievalContext:
     quran_citations: list[dict]      # verified Quran verses
 
 
-# ──────────────────────────────── Client ────────────────────────────────
+# ─── Client ──────────────────────────────────────────────────────────────────
 
 _client = AsyncGroq(api_key=settings.groq_api_key)
 
 
-# ──────────────────────────────── Prompt builder ────────────────────────────────
+# ─── Output sanitiser ────────────────────────────────────────────────────────
+# Strip stray CJK, Cyrillic, or other non-relevant scripts that sometimes
+# appear as LLM artefacts/hallucinations in the raw completion.
+_GARBAGE = re.compile(
+    r"[\u4e00-\u9fff"      # CJK unified ideographs (Chinese/Japanese/Korean)
+    r"\u3040-\u30ff"       # Hiragana + Katakana
+    r"\uac00-\ud7af"       # Korean Hangul syllables
+    r"\u0400-\u04ff"       # Cyrillic
+    r"\u0900-\u097f"       # Devanagari
+    r"\u0e00-\u0e7f]+"     # Thai
+)
+
+def _sanitize(text: str) -> str:
+    return _GARBAGE.sub("", text).strip()
+
+
+# ─── Prompt builder ──────────────────────────────────────────────────────────
+
+_SYSTEM = """\
+أنت الشيخ ابن باز (رحمه الله) — المفتي العام السابق للمملكة العربية السعودية وأحد كبار علماء الإسلام في القرن العشرين.
+
+# قواعد الإجابة (يجب الالتزام بها)
+
+1. **اللغة**: أجب بالعربية الفصيحة دائماً، مهما كانت لغة السؤال.
+2. **المصادر الشرعية**: استند حصراً إلى الفتاوى المقدمة في السياق. لا تخترع فتاوى أو أحاديث.
+3. **الاستشهاد بالقرآن الكريم**: عند ذكر آية قرآنية، اكتب نصها كاملاً وأتبعها بقوسين معقوفين واسم السورة ورقم الآية: {الآية} [سورة: رقمها].
+4. **الاستشهاد بالحديث النبوي**: عند ذكر حديث، اذكر نصه أو معناه وأتبعه بـ: (رواه البخاري) أو (رواه مسلم) أو الراوي المذكور في المصدر — فقط إذا ورد في السياق.
+5. **الاستشهاد بالفتاوى**: أشر إلى رقم الفتوى بين قوسين [فتوى: رقم] عند الاستناد إليها.
+6. **الهيكل**: نظّم إجابتك بوضوح:
+   - ابدأ بالحكم الشرعي مباشرة
+   - ثم الأدلة من القرآن والسنة (من السياق فقط)
+   - ثم الفتاوى التفصيلية ذات الصلة
+   - واختم بالتوصية الشرعية العملية
+7. **الموضوعية**: إن كان الموضوع خارج نطاق السياق، صرّح بذلك باختصار ولا تتكهن.
+8. **الشمولية**: كن وافياً ودقيقاً. اذكر الخلاف الفقهي إن وُجد في المصادر.
+9. **التحريم**: لا تُفتِ في أمر لم يرد في السياق المُقدَّم — قل «لم أجد هذه المسألة في الفتاوى المتاحة» إذا لزم.
+"""
 
 def _build_prompt(ctx: RetrievalContext) -> tuple[str, str]:
     """Return (system_prompt, user_message)."""
 
-    system = (
-        "أنت مساعد متخصص في فتاوى الشيخ عبد العزيز بن عبد الله بن باز رحمه الله، "
-        "المفتي العام للمملكة العربية السعودية سابقاً. "
-        "أجب باللغة العربية الفصيحة استناداً إلى السياق المقدم من فتاوى الشيخ فقط. "
-        "لا تخترع معلومات خارج السياق المقدم. "
-        "اذكر رقم الفتوى ومصدرها عند الاستشهاد عند الإمكان. "
-        "كن شاملاً ودقيقاً، واذكر الحكم الشرعي وأدلته من الفتاوى المقدمة."
-    )
+    # Format retrieved fatwas
+    fatwas_lines = []
+    for f in ctx.primary_fatwas:
+        answer_text = (f.get("answer") or f.get("answer_direct") or "")[:2000]
+        lines = [
+            f"┌── [فتوى {f['fatwa_id']}] {f.get('title', '')}",
+            f"│ السؤال: {f.get('question', '')[:400]}",
+            f"│ الجواب: {answer_text}",
+            f"│ المصدر: {f.get('source_ref', '')}",
+            "└──",
+        ]
+        fatwas_lines.append("\n".join(lines))
+    fatwas_block = "\n\n".join(fatwas_lines) if fatwas_lines else "لا توجد فتاوى متعلقة بهذا السؤال في قاعدة البيانات."
 
-    # Format retrieved fatwas (limit each to 1500 chars to save tokens)
-    fatwas_block = "\n\n".join(
-        f"[فتوى {f['fatwa_id']}] {f.get('title', '')}\n"
-        f"السؤال: {f.get('question', '')}\n"
-        f"الجواب: {(f.get('answer', '') or f.get('answer_direct', ''))[:1500]}\n"
-        f"المصدر: {f.get('source_ref', '')}"
-        for f in ctx.primary_fatwas
-    )
-
-    # Quran citations
-    quran_block = "\n".join(
-        f"[{q.get('reference', '')}] {q.get('verified_text', '')}"
-        for q in ctx.quran_citations
-    ) or "لا توجد آيات محددة"
+    # Format Quran citations
+    if ctx.quran_citations:
+        quran_lines = []
+        for q in ctx.quran_citations:
+            ref  = q.get("reference", "")
+            text = q.get("verified_text", "")
+            url  = q.get("quran_url", "")
+            if text and ref:
+                quran_lines.append(f"• {{{text}}} [{ref}]")
+            elif ref:
+                quran_lines.append(f"• [{ref}]")
+        quran_block = "\n".join(quran_lines)
+    else:
+        quran_block = "لم يتم استخراج آيات قرآنية مرتبطة بهذا السؤال."
 
     user_msg = (
         f"السؤال: {ctx.user_query}\n\n"
-        f"السياق من فتاوى الشيخ ابن باز:\n"
-        f"{'='*60}\n"
+        "═══════════════════════════════════════════\n"
+        "السياق الشرعي من فتاوى الشيخ ابن باز:\n"
+        "═══════════════════════════════════════════\n"
         f"{fatwas_block}\n\n"
-        f"{'='*60}\n"
-        f"آيات قرآنية ذات صلة:\n{quran_block}\n\n"
-        f"الرجاء الإجابة على السؤال بشكل مفصل ومنظم بناءً على الفتاوى أعلاه."
+        "═══════════════════════════════════════════\n"
+        "الآيات القرآنية المرتبطة من الفتاوى:\n"
+        "═══════════════════════════════════════════\n"
+        f"{quran_block}\n\n"
+        "التعليمات:\n"
+        "- أجب بشكل مفصّل ومنظّم مستنداً إلى الفتاوى والآيات أعلاه فقط.\n"
+        "- استشهد بكل آية مذكورة مع اسم سورتها ورقمها بين قوسين.\n"
+        "- أشر إلى أرقام الفتاوى عند الاستناد إليها [فتوى: رقم].\n"
+        "- إن ورد حديث نبوي في الفتاوى، اذكره مع مصدره.\n"
     )
 
-    return system, user_msg
+    return _SYSTEM, user_msg
 
 
-# ──────────────────────────────── Generate ────────────────────────────────
+# ─── Generate ─────────────────────────────────────────────────────────────────
 
 async def generate(ctx: RetrievalContext) -> RAGResponse:
     """
-    Call Groq API directly for plain-text generation.
-    No structured JSON output → model can write a complete, untruncated answer.
+    Call Groq API with a strict scholarly prompt.
+    Sanitises output to remove any LLM garbage characters.
     """
     system_prompt, user_message = _build_prompt(ctx)
 
@@ -89,13 +138,14 @@ async def generate(ctx: RetrievalContext) -> RAGResponse:
             {"role": "system", "content": system_prompt},
             {"role": "user",   "content": user_message},
         ],
-        temperature=0.2,          # low temp for factual Islamic content
-        max_tokens=2048,          # enough for a thorough answer
+        temperature=0.15,         # very low for factual, reproducible Islamic opinions
+        max_tokens=3000,          # enough for a thorough, multi-source answer
     )
 
-    answer = completion.choices[0].message.content or ""
+    raw_answer = completion.choices[0].message.content or ""
+    answer = _sanitize(raw_answer)  # strip CJK/Cyrillic artefacts
 
-    # Derive confidence from top retrieval score
+    # Confidence from retrieval score
     top_score = ctx.primary_fatwas[0].get("_score", 0.7) if ctx.primary_fatwas else 0.5
     confidence = min(round(float(top_score), 2), 1.0)
 

@@ -48,7 +48,8 @@ _Q_VERSE = re.compile(
     re.DOTALL,
 )
 _Q_REF_ONLY = re.compile(
-    r'\[([\u0600-\u06FF\s]{2,25}:\d{1,3}(?:-\d{1,3})?)\]'  # [SurahName:AyahNum]
+    # Regular string (not raw) so \u0600-\u06FF is a real Arabic Unicode range
+    '\\[([\\u0600-\\u06FF\\s]{2,25}:\\d{1,3}(?:-\\d{1,3})?)\\]'
 )
 
 
