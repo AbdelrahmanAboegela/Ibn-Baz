@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
+import { QuranBlock } from "@/components/content/QuranBlock";
 
 export default function SpeechDetailPage() {
     const params = useParams();
@@ -71,6 +72,13 @@ export default function SpeechDetailPage() {
                 >
                     {speech.text}
                 </div>
+
+                {/* Quran Citations — extracted from speech text */}
+                {speech.quran_citations?.length > 0 && (
+                    <div className="mt-8 p-5 rounded-xl border border-emerald-600/20 bg-emerald-950/10">
+                        <QuranBlock citations={speech.quran_citations} />
+                    </div>
+                )}
 
                 {speech.source_ref && (
                     <div className="mt-8 p-4 rounded-lg border border-border/30 bg-card/30">

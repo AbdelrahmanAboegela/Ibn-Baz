@@ -1,10 +1,11 @@
 """
 routes/content.py
-Non-fatwa content endpoints: articles, books, speeches, discussions.
+Non-fatwa content endpoints: articles, books, speeches, discussions, audios.
 All served from SQLite.
 """
 import json
 import math
+import re
 import sqlite3
 from typing import Optional
 
@@ -36,6 +37,51 @@ def get_db() -> sqlite3.Connection:
     conn.execute("PRAGMA cache_size=10000")   # ~40 MB page cache
     conn.execute("PRAGMA temp_store=MEMORY")
     return conn
+
+
+# ── Quran citation extractor ─────────────────────────────────────────────────
+# Islamic texts often quote Quran verses in {curly braces} with an optional
+# reference like [البقرة:238] or (البقرة: 238) immediately after.
+_Q_VERSE = re.compile(
+    r'\{([^{}]{10,400}?)\}'                              # { verse text }
+    r'(?:\s*(?:\[([^\]]{3,60}?)\]|\(([^)]{3,60}?)\)))?',  # optional [ref] or (ref)
+    re.DOTALL,
+)
+_Q_REF_ONLY = re.compile(
+    r'\[([\u0600-\u06FF\s]{2,25}:\d{1,3}(?:-\d{1,3})?)\]'  # [SurahName:AyahNum]
+)
+
+
+def extract_quran_refs(text: str) -> list[dict]:
+    """Extract Quran citations from raw Arabic text (up to 12)."""
+    if not text:
+        return []
+    seen, citations = set(), []
+
+    # Pattern 1: {verse text} + optional reference
+    for m in _Q_VERSE.finditer(text):
+        verse = m.group(1).strip()
+        ref   = (m.group(2) or m.group(3) or "").strip()
+        key   = verse[:40]
+        if key not in seen:
+            seen.add(key)
+            citations.append({"verified_text": verse, "reference": ref,
+                              "surah_name": "", "quran_url": ""})
+        if len(citations) >= 12:
+            break
+
+    # Pattern 2: standalone [SurahName:AyahNum] refs when no verse in braces
+    if not citations:
+        for m in _Q_REF_ONLY.finditer(text):
+            ref = m.group(1).strip()
+            if ref not in seen:
+                seen.add(ref)
+                citations.append({"verified_text": "", "reference": ref,
+                                  "surah_name": "", "quran_url": ""})
+            if len(citations) >= 12:
+                break
+
+    return citations
 
 
 # ──────────────────────────────── Articles ────────────────────────────────
@@ -189,7 +235,12 @@ async def get_article(article_id: int):
     conn.close()
     if not row:
         raise HTTPException(status_code=404, detail="Article not found")
-    return {**dict(row), "categories": json.loads(row["categories"]) if row["categories"] else []}
+    text = row["text"] or ""
+    return {
+        **dict(row),
+        "categories": json.loads(row["categories"]) if row["categories"] else [],
+        "quran_citations": extract_quran_refs(text),
+    }
 
 
 @router.get("/books/{book_id}")
@@ -209,7 +260,12 @@ async def get_speech(speech_id: int):
     conn.close()
     if not row:
         raise HTTPException(status_code=404, detail="Speech not found")
-    return {**dict(row), "categories": json.loads(row["categories"]) if row["categories"] else []}
+    text = row["text"] or ""
+    return {
+        **dict(row),
+        "categories": json.loads(row["categories"]) if row["categories"] else [],
+        "quran_citations": extract_quran_refs(text),
+    }
 
 
 @router.get("/discussions/{discussion_id}")
@@ -219,7 +275,12 @@ async def get_discussion(discussion_id: int):
     conn.close()
     if not row:
         raise HTTPException(status_code=404, detail="Discussion not found")
-    return {**dict(row), "categories": json.loads(row["categories"]) if row["categories"] else []}
+    text = row["text"] or ""
+    return {
+        **dict(row),
+        "categories": json.loads(row["categories"]) if row["categories"] else [],
+        "quran_citations": extract_quran_refs(text),
+    }
 
 
 # ──────────────────────────────── Audios ────────────────────────────────
@@ -269,10 +330,12 @@ async def get_audio(audio_id: int):
     conn.close()
     if not row:
         raise HTTPException(status_code=404, detail="Audio not found")
+    text = row["transcript"] or ""
     return {
         **dict(row),
         "has_audio": bool(row["audio_url"]),
         "categories": json.loads(row["categories"]) if row["categories"] else [],
         "qa_pairs": json.loads(row["qa_pairs"]) if row["qa_pairs"] else [],
+        "quran_citations": extract_quran_refs(text),
     }
 

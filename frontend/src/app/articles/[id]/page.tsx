@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
+import { QuranBlock } from "@/components/content/QuranBlock";
 
 export default function ArticleDetailPage() {
     const params = useParams();
@@ -74,13 +75,20 @@ export default function ArticleDetailPage() {
                     </div>
                 </div>
 
-                {article.source_ref && (
-                    <div className="mt-8 p-4 rounded-lg border border-border/30 bg-card/30">
-                        <p className="text-sm text-muted-foreground">
-                            <span className="font-bold text-foreground/70">المصدر: </span>
-                            {article.source_ref}
-                        </p>
+                {/* Quran Citations — extracted from text */}
+                {article.quran_citations?.length > 0 && (
+                    <div className="mt-8 p-5 rounded-xl border border-emerald-600/20 bg-emerald-950/10">
+                        <QuranBlock citations={article.quran_citations} />
                     </div>
+                )}
+
+                && (
+                <div className="mt-8 p-4 rounded-lg border border-border/30 bg-card/30">
+                    <p className="text-sm text-muted-foreground">
+                        <span className="font-bold text-foreground/70">المصدر: </span>
+                        {article.source_ref}
+                    </p>
+                </div>
                 )}
 
                 {article.url && (

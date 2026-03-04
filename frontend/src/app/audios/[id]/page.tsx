@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { NestedQA } from "@/components/content/NestedQA";
+import { QuranBlock } from "@/components/content/QuranBlock";
 
 export default function AudioDetailPage() {
     const params = useParams();
@@ -96,6 +97,13 @@ export default function AudioDetailPage() {
                         pairs={audio.qa_pairs}
                         title="أسئلة وأجوبة من الدرس"
                     />
+                )}
+
+                {/* Quran Citations extracted from transcript */}
+                {audio.quran_citations?.length > 0 && (
+                    <div className="p-5 rounded-xl border border-emerald-600/20 bg-emerald-950/10">
+                        <QuranBlock citations={audio.quran_citations} />
+                    </div>
                 )}
 
                 {/* Source link */}
