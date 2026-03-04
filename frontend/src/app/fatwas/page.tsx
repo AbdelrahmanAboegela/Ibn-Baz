@@ -118,6 +118,11 @@ function FatwasContent() {
                                             <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-600/30">
                                                 فتوى #{fatwa.fatwa_id}
                                             </Badge>
+                                            {fatwa.has_audio && (
+                                                <Badge className="text-xs bg-emerald-700/40 text-emerald-300 border-0">
+                                                    🎧 صوتي
+                                                </Badge>
+                                            )}
                                             {fatwa.categories.length > 0 && (
                                                 <Badge variant="secondary" className="text-xs">
                                                     {fatwa.categories[0]}

@@ -25,21 +25,22 @@ export function Header() {
     const [open, setOpen] = useState(false);
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl">
-            <div className="container mx-auto flex h-16 items-center justify-between px-4">
-                {/* Logo */}
-                <Link href="/" className="flex items-center gap-3">
-                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg">
+        <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/90 backdrop-blur-xl">
+            <div className="container mx-auto flex h-20 items-center justify-between px-4">
+
+                {/* Logo — portrait photo, tall and roomy */}
+                <Link href="/" className="flex items-center gap-4 group">
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl ring-2 ring-emerald-600/40 group-hover:ring-emerald-500/70 transition-all shadow-md shadow-emerald-950/30">
                         <Image
                             src="/ibn-baz.png"
                             alt="الشيخ ابن باز"
                             fill
-                            className="object-cover"
+                            className="object-cover object-top"
                             priority
                         />
                     </div>
                     <div className="hidden sm:block">
-                        <h1 className="text-lg font-bold leading-tight">مكتبة ابن باز</h1>
+                        <h1 className="text-xl font-bold leading-tight tracking-tight">مكتبة ابن باز</h1>
                         <p className="text-xs text-muted-foreground">رحمه الله</p>
                     </div>
                 </Link>
@@ -58,9 +59,9 @@ export function Header() {
                 </nav>
 
                 {/* Chat CTA */}
-                <div className="hidden md:flex items-center gap-2">
+                <div className="hidden md:flex items-center">
                     <Link href="/chat">
-                        <Button variant="default" className="bg-emerald-600 hover:bg-emerald-700">
+                        <Button className="bg-emerald-600 hover:bg-emerald-700">
                             💬 اسأل الشيخ
                         </Button>
                     </Link>
@@ -76,9 +77,17 @@ export function Header() {
                         </Button>
                     </SheetTrigger>
                     <SheetContent side="right" className="w-72">
-                        {/* Required for accessibility — visually hidden via sr-only */}
                         <SheetTitle className="sr-only">القائمة الرئيسية</SheetTitle>
-                        <nav className="flex flex-col gap-2 mt-8">
+                        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/40">
+                            <div className="relative h-12 w-12 overflow-hidden rounded-xl ring-1 ring-emerald-600/40">
+                                <Image src="/ibn-baz.png" alt="الشيخ ابن باز" fill className="object-cover object-top" />
+                            </div>
+                            <div>
+                                <p className="font-bold text-sm">مكتبة ابن باز</p>
+                                <p className="text-xs text-muted-foreground">رحمه الله</p>
+                            </div>
+                        </div>
+                        <nav className="flex flex-col gap-1">
                             {navItems.map((item) => (
                                 <Link
                                     key={item.href}
