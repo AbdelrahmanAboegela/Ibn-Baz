@@ -8,7 +8,7 @@ import math
 import sqlite3
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from api.models import (
     ArticleBrief,
@@ -173,3 +173,45 @@ async def list_discussions(
         per_page=per_page,
         total_pages=math.ceil(total / per_page) if total > 0 else 0,
     )
+
+
+# ──────────────────────────────── Detail endpoints ────────────────────────────────
+
+@router.get("/articles/{article_id}")
+async def get_article(article_id: int):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM articles WHERE id = ?", (article_id,)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Article not found")
+    return {**dict(row), "categories": json.loads(row["categories"]) if row["categories"] else []}
+
+
+@router.get("/books/{book_id}")
+async def get_book(book_id: int):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM books WHERE id = ?", (book_id,)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Book not found")
+    return dict(row)
+
+
+@router.get("/speeches/{speech_id}")
+async def get_speech(speech_id: int):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM speeches WHERE id = ?", (speech_id,)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Speech not found")
+    return {**dict(row), "categories": json.loads(row["categories"]) if row["categories"] else []}
+
+
+@router.get("/discussions/{discussion_id}")
+async def get_discussion(discussion_id: int):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM discussions WHERE id = ?", (discussion_id,)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Discussion not found")
+    return {**dict(row), "categories": json.loads(row["categories"]) if row["categories"] else []}

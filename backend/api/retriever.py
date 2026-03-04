@@ -12,9 +12,6 @@ from qdrant_client.models import (
     FieldCondition,
     Filter,
     MatchValue,
-    NamedVector,
-    QueryResponse,
-    SearchParams,
 )
 from sentence_transformers import SentenceTransformer
 
@@ -77,16 +74,17 @@ async def search_fatwas(
             ]
         )
 
-    results = client.search(
+    results = client.query_points(
         collection_name=settings.qdrant_collection,
-        query_vector=("dense", query_vector),
+        query=query_vector,
+        using="dense",
         query_filter=search_filter,
         limit=top_k,
         with_payload=True,
     )
 
     fatwas = []
-    for hit in results:
+    for hit in results.points:
         payload = hit.payload or {}
         payload["_score"] = hit.score
         fatwas.append(payload)

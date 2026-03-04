@@ -38,24 +38,31 @@ export const api = {
         categories: () => fetchApi<string[]>("/api/fatwas/categories"),
     },
 
-    // ── Content ──
+    // ── Articles ──
     articles: {
         list: (page = 1, perPage = 20) =>
             fetchApi<any>(`/api/articles?page=${page}&per_page=${perPage}`),
+        get: (id: number) => fetchApi<any>(`/api/articles/${id}`),
     },
 
+    // ── Books ──
     books: {
         list: () => fetchApi<any[]>("/api/books"),
+        get: (id: number) => fetchApi<any>(`/api/books/${id}`),
     },
 
+    // ── Speeches ──
     speeches: {
         list: (page = 1, perPage = 20) =>
             fetchApi<any>(`/api/speeches?page=${page}&per_page=${perPage}`),
+        get: (id: number) => fetchApi<any>(`/api/speeches/${id}`),
     },
 
+    // ── Discussions ──
     discussions: {
         list: (page = 1, perPage = 20) =>
             fetchApi<any>(`/api/discussions?page=${page}&per_page=${perPage}`),
+        get: (id: number) => fetchApi<any>(`/api/discussions/${id}`),
     },
 
     // ── Chat ──
