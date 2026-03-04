@@ -1,107 +1,107 @@
 """
 generator.py
-PydanticAI Agent with Groq (llama-3.3-70b-versatile).
-Produces structured RAGResponse with citations, validated at runtime.
+Direct Groq API generation — no structured JSON output so the model can write
+a full, untruncated Arabic answer. PydanticAI was causing truncation because
+the small model had to simultaneously generate a long answer AND close the JSON.
 """
 import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from pydantic_ai import Agent, RunContext
-from pydantic_ai.models.groq import GroqModel
-from pydantic_ai.providers.groq import GroqProvider
+from groq import AsyncGroq
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from config import settings
 from api.models import RAGResponse
-
-# Ensure Groq key is set
-os.environ.setdefault("GROQ_API_KEY", settings.groq_api_key)
 
 
 # ──────────────────────────────── Dependency type ────────────────────────────────
 
 @dataclass
 class RetrievalContext:
-    """Typed dependency: injected into the agent at run-time."""
+    """Typed dependency: injected into the generator at run-time."""
     user_query: str
     primary_fatwas: list[dict]       # top-k retrieved fatwas
     related_titles: list[str]        # from graph expansion
     quran_citations: list[dict]      # verified Quran verses
 
 
-# ──────────────────────────────── Agent Setup ────────────────────────────────
+# ──────────────────────────────── Client ────────────────────────────────
 
-# Create the Groq model
-_groq_model = GroqModel(
-    settings.groq_model,
-    provider=GroqProvider(api_key=settings.groq_api_key),
-)
-
-# The PydanticAI Agent — typed over (RetrievalContext, RAGResponse)
-agent = Agent(
-    model=_groq_model,
-    output_type=RAGResponse,
-    deps_type=RetrievalContext,
-)
+_client = AsyncGroq(api_key=settings.groq_api_key)
 
 
-# ──────────────────────────────── System Prompts ────────────────────────────────
+# ──────────────────────────────── Prompt builder ────────────────────────────────
 
-@agent.system_prompt
-def arabic_system_prompt() -> str:
-    """Static system prompt defining the assistant's role."""
-    return (
+def _build_prompt(ctx: RetrievalContext) -> tuple[str, str]:
+    """Return (system_prompt, user_message)."""
+
+    system = (
         "أنت مساعد متخصص في فتاوى الشيخ عبد العزيز بن عبد الله بن باز رحمه الله، "
-        "المفتي العام للمملكة العربية السعودية سابقاً وأحد أبرز علماء الأمة الإسلامية. "
-        "أجب باللغة العربية فقط استناداً إلى السياق المقدم من فتاوى الشيخ. "
+        "المفتي العام للمملكة العربية السعودية سابقاً. "
+        "أجب باللغة العربية الفصيحة استناداً إلى السياق المقدم من فتاوى الشيخ فقط. "
         "لا تخترع معلومات خارج السياق المقدم. "
-        "اذكر رقم الفتوى ومصدرها عند الاستشهاد. "
-        "اذكر الآيات القرآنية بنصها الكامل إذا وردت في السياق. "
-        "كن دقيقاً وأميناً في النقل عن الشيخ ابن باز."
+        "اذكر رقم الفتوى ومصدرها عند الاستشهاد عند الإمكان. "
+        "كن شاملاً ودقيقاً، واذكر الحكم الشرعي وأدلته من الفتاوى المقدمة."
     )
 
-
-@agent.system_prompt
-def inject_context(ctx: RunContext[RetrievalContext]) -> str:
-    """Dynamic system prompt: formats retrieved fatwas + Quran into context block."""
-    c = ctx.deps
-
-    # Format retrieved fatwas
+    # Format retrieved fatwas (limit each to 1500 chars to save tokens)
     fatwas_block = "\n\n".join(
         f"[فتوى {f['fatwa_id']}] {f.get('title', '')}\n"
         f"السؤال: {f.get('question', '')}\n"
-        f"الجواب: {f.get('answer', '')[:2000]}\n"
+        f"الجواب: {(f.get('answer', '') or f.get('answer_direct', ''))[:1500]}\n"
         f"المصدر: {f.get('source_ref', '')}"
-        for f in c.primary_fatwas
+        for f in ctx.primary_fatwas
     )
 
-    # Format Quran citations
+    # Quran citations
     quran_block = "\n".join(
         f"[{q.get('reference', '')}] {q.get('verified_text', '')}"
-        for q in c.quran_citations
-    ) if c.quran_citations else "لا توجد آيات قرآنية محددة في السياق"
+        for q in ctx.quran_citations
+    ) or "لا توجد آيات محددة"
 
-    # Format related fatwas
-    related_block = "، ".join(c.related_titles[:10]) if c.related_titles else "لا توجد"
-
-    return (
-        f"السياق المسترجع من فتاوى الشيخ ابن باز:\n"
-        f"{'='*50}\n"
+    user_msg = (
+        f"السؤال: {ctx.user_query}\n\n"
+        f"السياق من فتاوى الشيخ ابن باز:\n"
+        f"{'='*60}\n"
         f"{fatwas_block}\n\n"
-        f"{'='*50}\n"
-        f"الآيات القرآنية الموثقة:\n{quran_block}\n\n"
-        f"فتاوى ذات صلة: {related_block}"
+        f"{'='*60}\n"
+        f"آيات قرآنية ذات صلة:\n{quran_block}\n\n"
+        f"الرجاء الإجابة على السؤال بشكل مفصل ومنظم بناءً على الفتاوى أعلاه."
     )
+
+    return system, user_msg
 
 
 # ──────────────────────────────── Generate ────────────────────────────────
 
 async def generate(ctx: RetrievalContext) -> RAGResponse:
     """
-    Run the PydanticAI agent with the retrieval context.
-    Returns a Pydantic-validated RAGResponse.
+    Call Groq API directly for plain-text generation.
+    No structured JSON output → model can write a complete, untruncated answer.
     """
-    result = await agent.run(ctx.user_query, deps=ctx)
-    return result.output
+    system_prompt, user_message = _build_prompt(ctx)
+
+    completion = await _client.chat.completions.create(
+        model=settings.groq_model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": user_message},
+        ],
+        temperature=0.2,          # low temp for factual Islamic content
+        max_tokens=2048,          # enough for a thorough answer
+    )
+
+    answer = completion.choices[0].message.content or ""
+
+    # Derive confidence from top retrieval score
+    top_score = ctx.primary_fatwas[0].get("_score", 0.7) if ctx.primary_fatwas else 0.5
+    confidence = min(round(float(top_score), 2), 1.0)
+
+    return RAGResponse(
+        answer=answer,
+        confidence=confidence,
+        cited_fatwa_ids=[f["fatwa_id"] for f in ctx.primary_fatwas if f.get("fatwa_id")],
+        cited_quran_refs=[q.get("reference", "") for q in ctx.quran_citations if q.get("reference")],
+    )
