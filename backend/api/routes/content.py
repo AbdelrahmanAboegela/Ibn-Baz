@@ -39,17 +39,45 @@ def get_db() -> sqlite3.Connection:
     return conn
 
 
+# ── Load Quran verse data once at startup ─────────────────────────────────────────────────
+_QURAN_DATA: dict = {}
+try:
+    _qpath = Path(__file__).parent.parent.parent / "backend" / "data" / "quran_verses.json"
+    if not _qpath.exists():
+        _qpath = Path(settings.data_dir) / "quran_verses.json"
+    if _qpath.exists():
+        with open(_qpath, encoding="utf-8") as _f:
+            _QURAN_DATA = json.load(_f)
+except Exception:
+    pass
+
+_Q_SURAH_NAME_TO_NUM: dict[str, str] = _QURAN_DATA.get("surah_name_to_number", {})
+_Q_VERSES: dict = _QURAN_DATA.get("verses", {})
+
+
+def _lookup_verse(ref: str) -> str:
+    """Resolve 'البقرة:43' or 'البقرة: 43' to actual verse text from quran_verses.json."""
+    if ":" not in ref:
+        return ""
+    parts = ref.split(":")
+    surah_part = parts[0].strip()
+    ayah_part  = parts[-1].strip().split("-")[0].strip()  # handle ranges like 43-44
+    surah_num  = str(_Q_SURAH_NAME_TO_NUM.get(surah_part, ""))
+    if not surah_num:
+        return ""
+    return _Q_VERSES.get(surah_num, {}).get(ayah_part, "")
+
+
 # ── Quran citation extractor ─────────────────────────────────────────────────
-# Islamic texts often quote Quran verses in {curly braces} with an optional
-# reference like [البقرة:238] or (البقرة: 238) immediately after.
+# Islamic texts use: {verse text} optionally followed by [SurahName:N] or (SurahName:N)
 _Q_VERSE = re.compile(
     r'\{([^{}]{10,400}?)\}'                              # { verse text }
     r'(?:\s*(?:\[([^\]]{3,60}?)\]|\(([^)]{3,60}?)\)))?',  # optional [ref] or (ref)
     re.DOTALL,
 )
+# Match plain [SurahName:N] references in Arabic text (common in scraped content)
 _Q_REF_ONLY = re.compile(
-    # Regular string (not raw) so \u0600-\u06FF is a real Arabic Unicode range
-    '\\[([\\u0600-\\u06FF\\s]{2,25}:\\d{1,3}(?:-\\d{1,3})?)\\]'
+    r'\[([\u0600-\u06FF]{2,20}\s*:\s*\d{1,3}(?:\s*-\s*\d{1,3})?)\]'
 )
 
 
@@ -71,16 +99,18 @@ def extract_quran_refs(text: str) -> list[dict]:
         if len(citations) >= 12:
             break
 
-    # Pattern 2: standalone [SurahName:AyahNum] refs when no verse in braces
-    if not citations:
-        for m in _Q_REF_ONLY.finditer(text):
-            ref = m.group(1).strip()
-            if ref not in seen:
-                seen.add(ref)
-                citations.append({"verified_text": "", "reference": ref,
-                                  "surah_name": "", "quran_url": ""})
-            if len(citations) >= 12:
-                break
+    # Pattern 2: standalone [SurahName:AyahNum] — look up verse text from quran_verses.json
+    for m in _Q_REF_ONLY.finditer(text):
+        ref = m.group(1).strip()
+        key = ref
+        if key in seen:
+            continue
+        seen.add(key)
+        verse_text = _lookup_verse(ref)  # populated from quran_verses.json
+        citations.append({"verified_text": verse_text, "reference": ref,
+                          "surah_name": "", "quran_url": ""})
+        if len(citations) >= 12:
+            break
 
     return citations
 

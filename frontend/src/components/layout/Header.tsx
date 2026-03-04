@@ -19,7 +19,6 @@ const navItems = [
     { href: "/books", label: "الكتب" },
     { href: "/speeches", label: "الخطب" },
     { href: "/discussions", label: "المحاضرات" },
-    { href: "/chat", label: "اسأل الشيخ" },
 ];
 
 export function Header() {

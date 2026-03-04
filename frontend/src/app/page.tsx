@@ -104,31 +104,53 @@ export default function HomePage() {
       {/* ━━━ Sheikh Biography ━━━ */}
       <section className="container mx-auto px-4 pb-12">
         <Card className="border-emerald-600/20 bg-emerald-950/20">
-          <CardContent className="pt-6 md:flex md:gap-8">
-            <div className="flex-shrink-0 text-center mb-6 md:mb-0">
-              <div className="w-32 h-32 mx-auto rounded-full bg-emerald-900/40 border-2 border-emerald-600/30 flex items-center justify-center text-5xl font-[family-name:var(--font-amiri)]">
-                ابن باز
+          <CardContent className="pt-6">
+            <div className="md:flex md:gap-8">
+              {/* Photo */}
+              <div className="flex-shrink-0 text-center mb-6 md:mb-0">
+                <div className="w-36 h-36 mx-auto rounded-full overflow-hidden border-2 border-emerald-600/40 shadow-lg shadow-emerald-950/30">
+                  <img src="/ibn-baz.png" alt="الشيخ ابن باز" className="w-full h-full object-contain" />
+                </div>
+                <p className="text-xs text-emerald-500 mt-3 font-[family-name:var(--font-amiri)]">رحمه الله (١٣٣٠ — ١٤٢٠ هـ)</p>
               </div>
-            </div>
-            <div className="space-y-3 text-right">
-              <h2 className="text-xl font-bold font-[family-name:var(--font-amiri)]">
-                سماحة الشيخ عبد العزيز بن عبد الله بن باز
-              </h2>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                ولد رحمه الله في الرياض عام ١٣٣٠هـ، وحفظ القرآن الكريم قبل البلوغ،
-                وأصيب بمرض في عينيه عام ١٣٤٦هـ ثم فقد بصره بالكامل عام ١٣٥٠هـ.
-                تولى رئاسة الجامعة الإسلامية بالمدينة المنورة، ثم عُيّن رئيساً لإدارة البحوث
-                العلمية والإفتاء، ثم المفتي العام للمملكة العربية السعودية ورئيس هيئة كبار العلماء.
-              </p>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                عُرف رحمه الله بغزارة علمه وتواضعه ورحمته بالناس، وكان من أبرز المدافعين
-                عن عقيدة التوحيد والسنة النبوية. توفي رحمه الله عام ١٤٢٠هـ.
-              </p>
-              <div className="flex gap-2 flex-wrap">
-                <Badge variant="outline" className="text-emerald-400 border-emerald-600/30">التوحيد</Badge>
-                <Badge variant="outline" className="text-emerald-400 border-emerald-600/30">الفقه</Badge>
-                <Badge variant="outline" className="text-emerald-400 border-emerald-600/30">العقيدة</Badge>
-                <Badge variant="outline" className="text-emerald-400 border-emerald-600/30">الحديث</Badge>
+
+              {/* Text */}
+              <div className="space-y-4 text-right flex-1">
+                <div>
+                  <h2 className="text-2xl font-bold font-[family-name:var(--font-amiri)] mb-1">
+                    سماحة الشيخ عبد العزيز بن عبد الله بن عبد الرحمن بن باز
+                  </h2>
+                  <p className="text-emerald-500/80 text-sm">المفتي العام للمملكة العربية السعودية ورئيس هيئة كبار العلماء</p>
+                </div>
+
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  وُلد رحمه الله في مدينة الرياض عام <span className="text-foreground/80">١٣٣٠هـ (١٩١٢م)</span>، ونشأ في
+                  بيت علم وصلاح. حفظ القرآن الكريم قبل البلوغ، وأخذ العلم على كبار علماء عصره.
+                  أُصيب بضعف في بصره عام <span className="text-foreground/80">١٣٤٦هـ</span>، ثم فقد بصره كلياً عام <span className="text-foreground/80">١٣٥٠هـ</span>،
+                  غير أن ذلك لم يُثنِه عن طلب العلم، فاستعاض بقوة الحفظ وسرعة الاستيعاب.
+                </p>
+
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  تتلمذ على يد كبار العلماء في عصره كالشيخ محمد بن إبراهيم آل الشيخ والشيخ سعد بن حمد بن عتيق.
+                  تولى القضاء في منطقة الخرج أربعةً وعشرين عاماً، ثم انتقل إلى التدريس في المعهد العلمي والكليات.
+                  عُيِّن رئيساً للجامعة الإسلامية بالمدينة المنورة عام <span className="text-foreground/80">١٣٩٠هـ</span>، ثم رئيساً عاماً
+                  لإدارة البحوث العلمية والإفتاء عام <span className="text-foreground/80">١٣٩٥هـ</span>، إلى أن صدر مرسوم ملكي بتعيينه
+                  <span className="text-emerald-400"> مفتياً عاماً للمملكة العربية السعودية</span> عام <span className="text-foreground/80">١٤١٤هـ</span>.
+                </p>
+
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  عُرف رحمه الله بتواضعه الجمّ، وحرصه على إفادة طلاب العلم والعامة على حدٍّ سواء. كان يُجيب على
+                  الأسئلة الواردة إليه من شتى أنحاء العالم الإسلامي، وصدر عنه أكثر من
+                  <span className="text-emerald-400"> أربعة وعشرين ألف فتوى</span> في شتى مسائل الفقه والعقيدة والأخلاق.
+                  ترك رحمه الله إرثاً علمياً ضخماً، وانتقل إلى رحمة الله في
+                  <span className="text-foreground/80"> ٢٧ محرم ١٤٢٠هـ (١٣ مايو ١٩٩٩م)</span>.
+                </p>
+
+                <div className="flex gap-2 flex-wrap pt-1">
+                  {["التوحيد", "الفقه", "العقيدة", "الحديث", "التفسير", "الدعوة", "السياسة الشرعية"].map(b => (
+                    <Badge key={b} variant="outline" className="text-emerald-400 border-emerald-600/30 text-xs">{b}</Badge>
+                  ))}
+                </div>
               </div>
             </div>
           </CardContent>
