@@ -76,6 +76,14 @@ export const api = {
         streamUrl: () => `${API_BASE}/api/chat/stream`,
     },
 
+    // ── Audios ──
+    audios: {
+        list: (page = 1, perPage = 24) =>
+            fetchApi<any>(`/api/audios?page=${page}&per_page=${perPage}`),
+        get: (id: number) => fetchApi<any>(`/api/audios/${id}`),
+    },
+
     // ── Stats ──
     stats: () => fetchApi<any>("/api/stats"),
 };
+

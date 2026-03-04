@@ -220,3 +220,58 @@ async def get_discussion(discussion_id: int):
     if not row:
         raise HTTPException(status_code=404, detail="Discussion not found")
     return {**dict(row), "categories": json.loads(row["categories"]) if row["categories"] else []}
+
+
+# ──────────────────────────────── Audios ────────────────────────────────
+
+@router.get("/audios", response_model=PaginatedResponse)
+async def list_audios(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+):
+    conn = get_db()
+    offset = (page - 1) * per_page
+    # Show items with audio_url first, then those without
+    rows = conn.execute(
+        """SELECT * FROM audios
+           ORDER BY CASE WHEN audio_url != '' THEN 0 ELSE 1 END, id
+           LIMIT ? OFFSET ?""",
+        (per_page, offset),
+    ).fetchall()
+    total = conn.execute("SELECT COUNT(*) FROM audios").fetchone()[0]
+    conn.close()
+
+    items = [
+        {
+            "id": r["id"],
+            "title": r["title"] or "",
+            "transcript_preview": (r["transcript"] or "")[:300],
+            "audio_url": r["audio_url"] or "",
+            "has_audio": bool(r["audio_url"]),
+            "categories": json.loads(r["categories"]) if r["categories"] else [],
+        }
+        for r in rows
+    ]
+
+    return PaginatedResponse(
+        items=items,
+        total=total,
+        page=page,
+        per_page=per_page,
+        total_pages=math.ceil(total / per_page) if total > 0 else 0,
+    )
+
+
+@router.get("/audios/{audio_id}")
+async def get_audio(audio_id: int):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM audios WHERE id = ?", (audio_id,)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Audio not found")
+    return {
+        **dict(row),
+        "has_audio": bool(row["audio_url"]),
+        "categories": json.loads(row["categories"]) if row["categories"] else [],
+    }
+

@@ -14,6 +14,7 @@ import {
 const navItems = [
     { href: "/", label: "الرئيسية" },
     { href: "/fatwas", label: "الفتاوى" },
+    { href: "/audios", label: "الأشرطة" },
     { href: "/articles", label: "المقالات" },
     { href: "/books", label: "الكتب" },
     { href: "/speeches", label: "الخطب" },
