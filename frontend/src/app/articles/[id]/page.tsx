@@ -82,13 +82,13 @@ export default function ArticleDetailPage() {
                     </div>
                 )}
 
-                && (
-                <div className="mt-8 p-4 rounded-lg border border-border/30 bg-card/30">
-                    <p className="text-sm text-muted-foreground">
-                        <span className="font-bold text-foreground/70">المصدر: </span>
-                        {article.source_ref}
-                    </p>
-                </div>
+                {article.source_ref && (
+                    <div className="mt-8 p-4 rounded-lg border border-border/30 bg-card/30">
+                        <p className="text-sm text-muted-foreground">
+                            <span className="font-bold text-foreground/70">المصدر: </span>
+                            {article.source_ref}
+                        </p>
+                    </div>
                 )}
 
                 {article.url && (
