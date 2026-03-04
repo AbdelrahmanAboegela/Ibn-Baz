@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
+import { NestedQA } from "@/components/content/NestedQA";
 
 export default function AudioDetailPage() {
     const params = useParams();
@@ -67,10 +68,12 @@ export default function AudioDetailPage() {
 
             <div className="container mx-auto px-4 py-8 max-w-3xl space-y-6">
 
-                {/* Audio player — only shows when audio_url is confirmed */}
+                {/* Audio player — only when audio_url is confirmed */}
                 {audio.audio_url && (
                     <div className="p-5 rounded-xl border border-purple-600/30 bg-purple-950/20">
-                        <p className="text-sm font-semibold text-purple-400 mb-3">🎵 استمع للتسجيل</p>
+                        <p className="text-sm font-semibold text-purple-400 mb-3 flex items-center gap-2">
+                            <span>🎵</span> استمع للتسجيل
+                        </p>
                         <audio controls className="w-full" preload="metadata">
                             <source src={audio.audio_url} type="audio/mpeg" />
                             متصفحك لا يدعم تشغيل الصوت
@@ -78,14 +81,21 @@ export default function AudioDetailPage() {
                     </div>
                 )}
 
-                {/* Transcript */}
+                {/* Main transcript (lecture portion) */}
                 {audio.transcript && (
                     <div
-                        className="text-foreground/90 leading-[2.1] text-lg font-[family-name:var(--font-amiri)] whitespace-pre-line"
-                        style={{ lineHeight: "2.2" }}
+                        className="text-foreground/90 leading-[2.2] text-lg font-[family-name:var(--font-amiri)] whitespace-pre-line"
                     >
                         {audio.transcript}
                     </div>
+                )}
+
+                {/* Nested Q&A — from scraped qa_pairs */}
+                {audio.qa_pairs?.length > 0 && (
+                    <NestedQA
+                        pairs={audio.qa_pairs}
+                        title="أسئلة وأجوبة من الدرس"
+                    />
                 )}
 
                 {/* Source link */}

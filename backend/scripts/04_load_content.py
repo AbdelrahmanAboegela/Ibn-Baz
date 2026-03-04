@@ -126,11 +126,12 @@ def insert_audios(conn, items):
     for a in items:
         try:
             conn.execute(
-                "INSERT OR IGNORE INTO audios (url,title,transcript,audio_url,categories,scraped_at) VALUES (?,?,?,?,?,?)",
+                "INSERT OR IGNORE INTO audios (url,title,transcript,audio_url,categories,qa_pairs,scraped_at) VALUES (?,?,?,?,?,?,?)",
                 (a.get("url",""), a.get("title",""),
                  a.get("transcript", a.get("text","")),
                  a.get("audio_url",""),
                  json.dumps(a.get("categories",[]), ensure_ascii=False),
+                 json.dumps(a.get("qa_pairs",[]), ensure_ascii=False),
                  a.get("scraped_at",""))
             )
         except Exception as e:

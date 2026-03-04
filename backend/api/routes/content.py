@@ -273,5 +273,6 @@ async def get_audio(audio_id: int):
         **dict(row),
         "has_audio": bool(row["audio_url"]),
         "categories": json.loads(row["categories"]) if row["categories"] else [],
+        "qa_pairs": json.loads(row["qa_pairs"]) if row["qa_pairs"] else [],
     }
 
