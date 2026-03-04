@@ -29,8 +29,9 @@ Start-Sleep -Seconds 3
 
 Write-Host "  Starting frontend (http://localhost:3000) ..." -ForegroundColor Green
 Start-Process pwsh -ArgumentList "-NoExit", "-Command", `
-    "Set-Location '$root\frontend'; npm run dev" `
+    "Set-Location '$root\frontend'; npm run build; npm run start" `
     -WindowStyle Normal
+
 
 Write-Host ""
 Write-Host "  Both services started in separate windows." -ForegroundColor Cyan

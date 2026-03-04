@@ -11,18 +11,21 @@ import { api } from "@/lib/api";
 import type { DashboardStats } from "@/types";
 
 const STAT_ITEMS = [
-  { key: "total_fatwas" as const, label: "فتوى", icon: "📜" },
-  { key: "total_articles" as const, label: "مقال", icon: "📝" },
-  { key: "total_books" as const, label: "كتاب", icon: "📚" },
-  { key: "total_speeches" as const, label: "خطبة", icon: "🎤" },
-  { key: "total_discussions" as const, label: "محاضرة", icon: "💬" },
+  { key: "total_fatwas" as const, label: "فتوى" },
+  { key: "total_articles" as const, label: "مقال" },
+  { key: "total_books" as const, label: "كتاب" },
+  { key: "total_speeches" as const, label: "خطبة" },
+  { key: "total_discussions" as const, label: "محاضرة" },
 ];
 
 const QUICK_LINKS = [
-  { href: "/fatwas", label: "تصفح الفتاوى", icon: "📜", desc: "أكثر من 24 ألف فتوى" },
-  { href: "/articles", label: "المقالات", icon: "📝", desc: "مقالات علمية" },
-  { href: "/books", label: "الكتب", icon: "📚", desc: "مؤلفات الشيخ" },
-  { href: "/chat", label: "اسأل الشيخ", icon: "🤖", desc: "محرك بحث ذكي" },
+  { href: "/fatwas", label: "الفتاوى", desc: "أكثر من ٢٤ ألف فتوى" },
+  { href: "/articles", label: "المقالات", desc: "مقالات علمية" },
+  { href: "/books", label: "الكتب", desc: "مؤلفات الشيخ" },
+  { href: "/speeches", label: "الخطب", desc: "خطب الجمعة وغيرها" },
+  { href: "/discussions", label: "المحاضرات", desc: "محاضرات علمية" },
+  { href: "/audios", label: "الأشرطة", desc: "تسجيلات صوتية" },
+  { href: "/chat", label: "اسأل الشيخ", desc: "محرك بحث ذكي" },
 ];
 
 export default function HomePage() {
@@ -80,16 +83,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ━━━ Stats ━━━ */}
       <section className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {STAT_ITEMS.map((item) => (
-            <Card key={item.key} className="text-center border-border/40 bg-card/50">
+            <Card key={item.key} className="text-center border-border/40 bg-card/50 transition-all duration-200 hover:border-emerald-600/40 hover:shadow-md hover:shadow-emerald-950/20">
               <CardContent className="pt-6">
-                <div className="text-3xl mb-2">{item.icon}</div>
                 {stats ? (
                   <div className="text-2xl font-bold text-emerald-400">
-                    {stats[item.key]?.toLocaleString("ar-EG")}
+                    {stats[item.key]?.toLocaleString("ar-EG") ?? "—"}
                   </div>
                 ) : (
                   <Skeleton className="h-8 w-16 mx-auto" />
@@ -160,16 +161,13 @@ export default function HomePage() {
       {/* ━━━ Quick Links ━━━ */}
       <section className="container mx-auto px-4 pb-16">
         <h2 className="text-2xl font-bold mb-6">تصفح المكتبة</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
           {QUICK_LINKS.map((link) => (
             <Link key={link.href} href={link.href}>
-              <Card className="h-full border-border/40 hover:border-emerald-600/40 transition-all hover:shadow-lg hover:shadow-emerald-950/20 cursor-pointer group">
-                <CardContent className="pt-6 text-center">
-                  <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
-                    {link.icon}
-                  </div>
-                  <h3 className="font-bold text-lg mb-1">{link.label}</h3>
-                  <p className="text-sm text-muted-foreground">{link.desc}</p>
+              <Card className="h-full border-border/40 hover:border-emerald-600/50 transition-all duration-200 hover:shadow-lg hover:shadow-emerald-950/20 hover:-translate-y-0.5 cursor-pointer">
+                <CardContent className="pt-5 pb-5 text-center">
+                  <h3 className="font-semibold text-base mb-1">{link.label}</h3>
+                  <p className="text-xs text-muted-foreground/70">{link.desc}</p>
                 </CardContent>
               </Card>
             </Link>

@@ -58,11 +58,10 @@ export function Header() {
                     ))}
                 </nav>
 
-                {/* Chat CTA */}
                 <div className="hidden md:flex items-center">
                     <Link href="/chat">
-                        <Button className="bg-emerald-600 hover:bg-emerald-700">
-                            💬 اسأل الشيخ
+                        <Button className="bg-emerald-600 hover:bg-emerald-700 transition-all duration-200">
+                            اسأل الشيخ
                         </Button>
                     </Link>
                 </div>

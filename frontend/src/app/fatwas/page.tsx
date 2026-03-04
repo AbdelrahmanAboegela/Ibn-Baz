@@ -50,7 +50,7 @@ function FatwasContent() {
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-2 font-[family-name:var(--font-amiri)]">
-                    📜 فتاوى الشيخ ابن باز
+                    فتاوى الشيخ ابن باز
                 </h1>
                 <p className="text-muted-foreground">
                     {total > 0 ? `${total.toLocaleString("ar-EG")} فتوى` : "جاري التحميل..."}
@@ -119,17 +119,15 @@ function FatwasContent() {
                                                 فتوى #{fatwa.fatwa_id}
                                             </Badge>
                                             {fatwa.has_audio && (
-                                                <Badge className="text-xs bg-emerald-700/40 text-emerald-300 border-0">
-                                                    🎧 صوتي
+                                                <Badge className="text-xs bg-emerald-700/30 text-emerald-300 border border-emerald-700/40 gap-1 flex items-center">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6" /><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" /></svg>
+                                                    صوتي
                                                 </Badge>
                                             )}
                                             {fatwa.categories.length > 0 && (
                                                 <Badge variant="secondary" className="text-xs">
                                                     {fatwa.categories[0]}
                                                 </Badge>
-                                            )}
-                                            {fatwa.has_audio && (
-                                                <Badge variant="outline" className="text-xs">🎧 صوتي</Badge>
                                             )}
                                         </div>
                                     </div>
