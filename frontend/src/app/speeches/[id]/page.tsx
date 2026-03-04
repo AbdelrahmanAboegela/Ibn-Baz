@@ -65,22 +65,6 @@ export default function SpeechDetailPage() {
             </div>
 
             <div className="container mx-auto px-4 py-8 max-w-3xl">
-                {/* Audio — links to original page which embeds the audio player */}
-                {speech.url && (
-                    <a
-                        href={speech.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 mb-8 p-4 rounded-xl border border-amber-600/30 bg-amber-950/20 hover:bg-amber-950/40 transition-colors group"
-                    >
-                        <span className="text-3xl">🎧</span>
-                        <div>
-                            <p className="font-bold text-amber-400 group-hover:text-amber-300">استمع للخطبة</p>
-                            <p className="text-xs text-muted-foreground">يتوفر تسجيل صوتي على الموقع الرسمي</p>
-                        </div>
-                        <span className="mr-auto text-amber-500 text-sm">↗</span>
-                    </a>
-                )}
                 <div
                     className="text-foreground/90 leading-[2.1] text-lg font-[family-name:var(--font-amiri)] whitespace-pre-line"
                     style={{ lineHeight: "2.2" }}

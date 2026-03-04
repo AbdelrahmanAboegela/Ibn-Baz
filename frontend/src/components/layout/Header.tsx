@@ -30,12 +30,12 @@ export function Header() {
 
                 {/* Logo — portrait photo, tall and roomy */}
                 <Link href="/" className="flex items-center gap-4 group">
-                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl ring-2 ring-emerald-600/40 group-hover:ring-emerald-500/70 transition-all shadow-md shadow-emerald-950/30">
+                    <div className="relative h-14 w-14 shrink-0">
                         <Image
                             src="/ibn-baz.png"
                             alt="الشيخ ابن باز"
                             fill
-                            className="object-cover object-top"
+                            className="object-contain drop-shadow-md"
                             priority
                         />
                     </div>
@@ -80,7 +80,7 @@ export function Header() {
                         <SheetTitle className="sr-only">القائمة الرئيسية</SheetTitle>
                         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/40">
                             <div className="relative h-12 w-12 overflow-hidden rounded-xl ring-1 ring-emerald-600/40">
-                                <Image src="/ibn-baz.png" alt="الشيخ ابن باز" fill className="object-cover object-top" />
+                                <Image src="/ibn-baz.png" alt="الشيخ ابن باز" fill className="object-contain" />
                             </div>
                             <div>
                                 <p className="font-bold text-sm">مكتبة ابن باز</p>
