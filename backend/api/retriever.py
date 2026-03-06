@@ -13,7 +13,10 @@ from qdrant_client.models import (
     Filter,
     MatchValue,
 )
+import torch
 from sentence_transformers import SentenceTransformer
+
+_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from config import settings
@@ -32,12 +35,13 @@ def get_qdrant_client() -> QdrantClient:
 
 
 def get_embed_model() -> SentenceTransformer:
-    """Get or create embedding model (cached from HF)."""
+    """Get or create embedding model (singleton, GPU if available)."""
     global _embed_model
     if _embed_model is None:
         _embed_model = SentenceTransformer(
             settings.embedding_model,
             cache_folder=settings.transformers_cache,
+            device=_DEVICE,
         )
     return _embed_model
 

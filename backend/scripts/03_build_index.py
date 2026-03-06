@@ -21,6 +21,9 @@ from qdrant_client.models import (
     VectorParams,
 )
 from sentence_transformers import SentenceTransformer
+import torch
+
+_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Add parent to path for config
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -61,13 +64,14 @@ def create_collection(client: QdrantClient):
 
 
 def load_embedding_model() -> SentenceTransformer:
-    """Load the multilingual-e5-base model (uses cached version)."""
-    print(f"🔧 Loading embedding model: {settings.embedding_model}...")
+    """Load the multilingual-e5-base model (uses cached version, GPU if available)."""
+    print(f"Loading embedding model: {settings.embedding_model} on {_DEVICE}...")
     model = SentenceTransformer(
         settings.embedding_model,
         cache_folder=settings.transformers_cache,
+        device=_DEVICE,
     )
-    print(f"   ✅ Loaded successfully (device: {model.device})")
+    print(f"   Loaded successfully (device: {model.device})")
     return model
 
 
