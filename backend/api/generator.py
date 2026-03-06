@@ -10,7 +10,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from groq import AsyncGroq
+from openai import AsyncOpenAI
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from config import settings
@@ -30,7 +30,10 @@ class RetrievalContext:
 
 # ─── Client ──────────────────────────────────────────────────────────────────
 
-_client = AsyncGroq(api_key=settings.groq_api_key)
+_client = AsyncOpenAI(
+    api_key=settings.fanar_api_key,
+    base_url="https://api.fanar.qa/v1"
+)
 
 
 # ─── Output sanitiser ────────────────────────────────────────────────────────
@@ -133,7 +136,7 @@ async def generate(ctx: RetrievalContext) -> RAGResponse:
     system_prompt, user_message = _build_prompt(ctx)
 
     completion = await _client.chat.completions.create(
-        model=settings.groq_model,
+        model=settings.fanar_model,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user",   "content": user_message},

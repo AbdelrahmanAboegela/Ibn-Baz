@@ -12,13 +12,9 @@ BASE_DIR = Path(__file__).resolve().parent
 
 
 class Settings(BaseSettings):
-    # --- Groq API Keys (rotate to avoid rate limits) ---
-    groq_api_key: str
-    groq_api_key_2: Optional[str] = None
-    groq_api_key_3: Optional[str] = None
-    groq_api_key_4: Optional[str] = None
-    groq_api_key_5: Optional[str] = None
-    groq_model: str = "llama-3.3-70b-versatile"
+    # --- Fanar API Keys ---
+    fanar_api_key: str
+    fanar_model: str = "Fanar-Sadiq"
 
     # --- Hugging Face ---
     hf_home: str = str(Path.home() / ".cache" / "huggingface")
@@ -41,15 +37,7 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
 
-    @property
-    def all_groq_keys(self) -> list[str]:
-        """All available Groq keys for rotation."""
-        keys = [self.groq_api_key]
-        for attr in [self.groq_api_key_2, self.groq_api_key_3,
-                     self.groq_api_key_4, self.groq_api_key_5]:
-            if attr:
-                keys.append(attr)
-        return keys
+
 
     class Config:
         env_file = str(BASE_DIR / ".env")
