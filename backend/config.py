@@ -14,7 +14,7 @@ BASE_DIR = Path(__file__).resolve().parent
 class Settings(BaseSettings):
     # --- Fanar API Keys ---
     fanar_api_key: str
-    fanar_model: str = "Fanar-Sadiq"
+    fanar_model: str = "Fanar-C-2-27B"
 
     # --- Hugging Face ---
     hf_home: str = str(Path.home() / ".cache" / "huggingface")

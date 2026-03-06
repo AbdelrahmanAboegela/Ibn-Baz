@@ -9,7 +9,7 @@ from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
 from api.models import ChatRequest, ChatResponse
-from api.rag_pipeline import run_rag_pipeline
+from api.rag_pipeline import run_rag_pipeline, run_rag_pipeline_stream
 
 router = APIRouter(prefix="/api/chat", tags=["Chat"])
 
@@ -27,21 +27,12 @@ async def chat_stream(req: ChatRequest):
 
     async def event_stream():
         # Send initial "thinking" event
-        yield f"data: {json.dumps({'type': 'status', 'content': 'جاري البحث...'}, ensure_ascii=False)}\n\n"
+        yield f"data: {json.dumps({'type': 'status', 'content': 'جاري البحث في الفتاوى...'}, ensure_ascii=False)}\n\n"
 
         try:
-            # Run the full pipeline
-            response = await run_rag_pipeline(req.query, top_k=req.top_k)
-
-            # Stream the answer in chunks for a natural feel
-            answer = response.answer
-            chunk_size = 50
-            for i in range(0, len(answer), chunk_size):
-                chunk = answer[i:i + chunk_size]
-                yield f"data: {json.dumps({'type': 'chunk', 'content': chunk}, ensure_ascii=False)}\n\n"
-
-            # Send metadata
-            yield f"data: {json.dumps({'type': 'metadata', 'content': response.model_dump()}, ensure_ascii=False)}\n\n"
+            # Stream events directly from the true streaming pipeline
+            async for event in run_rag_pipeline_stream(req.query, top_k=req.top_k):
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
 
             # Done
             yield f"data: {json.dumps({'type': 'done'})}\n\n"

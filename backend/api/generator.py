@@ -1,12 +1,9 @@
 """
 generator.py
-Direct Groq API generation with a strict Islamic scholarly prompt.
-Uses retrieved fatwas, Quran citations, and context to generate
-well-cited Arabic answers in the style of Sheikh Ibn Baz (رحمه الله).
+Handles LLM generation for the RAG pipeline.
 """
-import re
-import os
 import sys
+from typing import AsyncGenerator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -127,6 +124,28 @@ def _build_prompt(ctx: RetrievalContext) -> tuple[str, str]:
 
 
 # ─── Generate ─────────────────────────────────────────────────────────────────
+
+async def generate_stream(ctx: RetrievalContext) -> AsyncGenerator[str, None]:
+    """
+    Call Fanar API and stream the response back in real-time.
+    """
+    system_prompt, user_message = _build_prompt(ctx)
+
+    stream = await _client.chat.completions.create(
+        model=settings.fanar_model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": user_message},
+        ],
+        temperature=0.15,
+        max_tokens=3000,
+        stream=True,
+    )
+
+    async for chunk in stream:
+        if chunk.choices and chunk.choices[0].delta.content is not None:
+            yield chunk.choices[0].delta.content
+
 
 async def generate(ctx: RetrievalContext) -> RAGResponse:
     """
