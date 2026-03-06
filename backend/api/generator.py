@@ -2,6 +2,8 @@
 generator.py
 Handles LLM generation for the RAG pipeline.
 """
+import re
+import os
 import sys
 from typing import AsyncGenerator
 from dataclasses import dataclass
