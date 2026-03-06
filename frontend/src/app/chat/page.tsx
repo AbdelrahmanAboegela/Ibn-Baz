@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import Link from "next/link";
 import type { ChatResponse, SSEEvent } from "@/types";
@@ -16,6 +17,20 @@ interface Message {
     content: string;
     metadata?: ChatResponse;
     loading?: boolean;
+}
+
+/** Three staggered bouncing dots shown while waiting for the first streamed token */
+function ThinkingDots() {
+    return (
+        <div className="flex flex-col gap-2 py-1">
+            <div className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:-300ms]" />
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:-150ms]" />
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:0ms]" />
+            </div>
+            <p className="text-xs text-muted-foreground">جاري البحث في الفتاوى...‏</p>
+        </div>
+    );
 }
 
 const SUGGESTED_QUESTIONS = [
@@ -139,7 +154,7 @@ export default function ChatPage() {
         <div className="container mx-auto px-4 py-8 max-w-4xl">
             <div className="mb-6">
                 <h1 className="text-3xl font-bold font-[family-name:var(--font-amiri)]">
-                    🤖 اسأل الشيخ ابن باز
+                    اسأل الشيخ ابن باز
                 </h1>
                 <p className="text-muted-foreground text-sm mt-1">
                     محرك بحث ذكي مبني على فتاوى الشيخ ابن باز رحمه الله — مع توثيق الآيات والمصادر
@@ -151,7 +166,9 @@ export default function ChatPage() {
                 <ScrollArea className="flex-1 p-4">
                     {messages.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center py-16">
-                            <div className="text-6xl mb-4">📖</div>
+                            <div className="w-14 h-14 rounded-2xl bg-emerald-900/30 border border-emerald-700/30 flex items-center justify-center mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
+                            </div>
                             <p className="text-lg font-bold mb-6">ابدأ بسؤال</p>
                             <div className="flex flex-wrap gap-2 justify-center max-w-lg">
                                 {SUGGESTED_QUESTIONS.map((q) => (
@@ -172,16 +189,22 @@ export default function ChatPage() {
                             {messages.map((msg, i) => (
                                 <div key={i} className={`flex ${msg.role === "user" ? "justify-start" : "justify-end"}`}>
                                     <div className={`max-w-[85%] ${msg.role === "user"
-                                            ? "bg-emerald-600/20 border border-emerald-600/30"
-                                            : "bg-muted"
+                                        ? "bg-emerald-600/20 border border-emerald-600/30"
+                                        : "bg-muted"
                                         } rounded-xl p-4`}>
                                         <p className="text-xs text-muted-foreground mb-1">
                                             {msg.role === "user" ? "أنت" : "الشيخ ابن باز (AI)"}
                                         </p>
                                         <div className="whitespace-pre-wrap leading-relaxed">
-                                            {msg.content}
-                                            {msg.loading && (
-                                                <span className="inline-block w-2 h-4 bg-emerald-400 animate-pulse mr-1" />
+                                            {msg.loading && !msg.content ? (
+                                                <ThinkingDots />
+                                            ) : (
+                                                <>
+                                                    {msg.content}
+                                                    {msg.loading && (
+                                                        <span className="inline-block w-0.5 h-[1.1em] bg-emerald-400 animate-pulse align-middle mx-0.5 rounded-sm" />
+                                                    )}
+                                                </>
                                             )}
                                         </div>
 
@@ -207,7 +230,7 @@ export default function ChatPage() {
                                                 {/* Cited Fatwas */}
                                                 {msg.metadata.cited_fatwas.length > 0 && (
                                                     <div>
-                                                        <p className="text-xs font-bold text-emerald-400 mb-2">📜 المصادر:</p>
+                                                        <p className="text-xs font-bold text-emerald-400 mb-2">المصادر:</p>
                                                         <div className="flex flex-wrap gap-2">
                                                             {msg.metadata.cited_fatwas.map((f) => (
                                                                 <Link key={f.fatwa_id} href={`/fatwas/${f.fatwa_id}`}>
@@ -223,7 +246,7 @@ export default function ChatPage() {
                                                 {/* Quran Citations */}
                                                 {msg.metadata.quran_citations.length > 0 && (
                                                     <div>
-                                                        <p className="text-xs font-bold text-emerald-400 mb-2">📖 الآيات:</p>
+                                                        <p className="text-xs font-bold text-emerald-400 mb-2">الآيات:</p>
                                                         <div className="space-y-2">
                                                             {msg.metadata.quran_citations.slice(0, 3).map((c, i) => (
                                                                 <div key={i} className="p-2 rounded bg-background/50 text-sm">
@@ -263,9 +286,12 @@ export default function ChatPage() {
                         <Button
                             onClick={() => sendMessage(input)}
                             disabled={isLoading || !input.trim()}
-                            className="bg-emerald-600 hover:bg-emerald-700 px-6"
+                            className="bg-emerald-600 hover:bg-emerald-700 transition-all duration-200 px-6 min-w-[80px]"
                         >
-                            {isLoading ? "⏳" : "إرسال"}
+                            {isLoading
+                                ? <Loader2 className="h-4 w-4 animate-spin" />
+                                : "إرسال"
+                            }
                         </Button>
                     </div>
                 </div>
