@@ -112,7 +112,11 @@ def _build_hadith_verdict_response(
     scholar    = info["scholar"]
     seq        = info["sequence"]
 
-    # Verdict phrase and explanation based on grade category
+    # Verdict phrase and explanation based on grade category.
+    # degree_cat=3 covers both ضعيف AND موضوع/لا يصح — check raw grade string.
+    _fabricated_kw = {"موضوع", "لا يصح", "باطل", "منكر", "مكذوب", "واهٍ جداً"}
+    is_fabricated = deg_cat == 3 and any(kw in grade for kw in _fabricated_kw)
+
     if deg_cat == 1:
         verdict  = "صحيح"
         verdict_detail = "ثابت بسند صحيح عن النبي ﷺ."
@@ -121,7 +125,7 @@ def _build_hadith_verdict_response(
         verdict  = "حسن"
         verdict_detail = "حسن الإسناد، ويُحتج به في الأحكام الشرعية."
         confidence = 0.90
-    elif deg_cat == 3:
+    elif deg_cat == 3 and not is_fabricated:
         verdict  = "ضعيف"
         verdict_detail = "ضعيف الإسناد، ولا يصح الاحتجاج به في الأحكام، وإن جاز ذكره في فضائل الأعمال عند بعض العلماء."
         confidence = 0.92

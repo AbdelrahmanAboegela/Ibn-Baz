@@ -124,14 +124,32 @@ async def _search_one(snippet: str) -> Optional[dict]:
                 return None
             norm_query = _normalize(query)
             query_words = {w for w in norm_query.split() if len(w) >= 3}
-            best, best_score = ahadith[0], 0
+
+            # Collect all results that share at least one significant word with query.
+            # Tuple: (score, deg, hadith_dict)
+            candidates: list[tuple[int, int, dict]] = []
             for h in ahadith:
                 clean = _strip_html(h.get("hadith", ""))
                 h_words = {w for w in _normalize(clean).split() if len(w) >= 3}
                 score = len(query_words & h_words)
-                if score > best_score:
-                    best_score, best = score, h
-            return best
+                if score > 0:
+                    deg = int(h.get("degree_cat") or 99)
+                    candidates.append((score, deg, h))
+
+            if not candidates:
+                return None
+
+            # Sort key: (-score, deg)
+            #   • -score ASC  → highest overlap first (most relevant topic wins)
+            #   • deg   ASC  → lowest degree_cat (best grade) breaks ties
+            # Scenario A — same hadith, multiple chains ("من كذب علي متعمدا"):
+            #   all 15 results share the same overlap score → grade breaks tie
+            #   → degree_cat=1 (صحيح) beats degree_cat=3 (موضوع) ✓
+            # Scenario B — different-topic hadiths sharing some words:
+            #   the hadith with more matching words wins on overlap
+            #   → correct topic returned regardless of grade ✓
+            candidates.sort(key=lambda x: (-x[0], x[1]))
+            return candidates[0][2]
     except Exception:
         return None
 
