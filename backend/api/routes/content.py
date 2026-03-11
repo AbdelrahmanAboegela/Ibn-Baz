@@ -18,6 +18,14 @@ from api.models import (
     PaginatedResponse,
     SpeechBrief,
 )
+from api.hadith_resolver import extract_citations as _extract_hadith
+
+
+def extract_hadith_refs(text: str) -> list[dict]:
+    """Extract hadith citations from raw Arabic text, serialised as dicts."""
+    if not text:
+        return []
+    return [c.model_dump() for c in _extract_hadith(text)]
 
 import sys
 from pathlib import Path
@@ -271,6 +279,7 @@ async def get_article(article_id: int):
         **dict(row),
         "categories": json.loads(row["categories"]) if row["categories"] else [],
         "quran_citations": extract_quran_refs(text),
+        "hadith_citations": extract_hadith_refs(text),
     }
 
 
@@ -296,6 +305,7 @@ async def get_speech(speech_id: int):
         **dict(row),
         "categories": json.loads(row["categories"]) if row["categories"] else [],
         "quran_citations": extract_quran_refs(text),
+        "hadith_citations": extract_hadith_refs(text),
     }
 
 
@@ -311,6 +321,7 @@ async def get_discussion(discussion_id: int):
         **dict(row),
         "categories": json.loads(row["categories"]) if row["categories"] else [],
         "quran_citations": extract_quran_refs(text),
+        "hadith_citations": extract_hadith_refs(text),
     }
 
 
@@ -368,5 +379,6 @@ async def get_audio(audio_id: int):
         "categories": json.loads(row["categories"]) if row["categories"] else [],
         "qa_pairs": json.loads(row["qa_pairs"]) if row["qa_pairs"] else [],
         "quran_citations": extract_quran_refs(text),
+        "hadith_citations": extract_hadith_refs(text),
     }
 

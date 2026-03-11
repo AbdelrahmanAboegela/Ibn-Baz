@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { NestedQA, parseQAPairs } from "@/components/content/NestedQA";
 import { QuranBlock } from "@/components/content/QuranBlock";
+import { HadithBlock } from "@/components/content/HadithBlock";
 import type { FatwaFull, RelatedFatwa } from "@/types";
 
 export default function FatwaDetailPage() {
@@ -159,6 +160,15 @@ export default function FatwaDetailPage() {
                         <Card className="border-emerald-600/20">
                             <CardContent className="pt-5">
                                 <QuranBlock citations={fatwa.quran_citations} />
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Hadith Citations — extracted from answer text */}
+                    {fatwa.hadith_citations?.length > 0 && (
+                        <Card className="border-amber-600/20 bg-amber-950/10">
+                            <CardContent className="pt-5">
+                                <HadithBlock citations={fatwa.hadith_citations} />
                             </CardContent>
                         </Card>
                     )}

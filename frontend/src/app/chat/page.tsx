@@ -1,16 +1,21 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mic, MicOff } from "lucide-react";
 import { api } from "@/lib/api";
+import { stripXmlTags } from "@/lib/arabicText";
 import Link from "next/link";
 import type { ChatResponse, SSEEvent } from "@/types";
+import { HadithBlock } from "@/components/content/HadithBlock";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
 
 interface Message {
     role: "user" | "assistant";
@@ -46,6 +51,10 @@ export default function ChatPage() {
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    const { isListening, isSupported, start, stop } = useVoiceInput({
+        onResult: (transcript) => setInput(transcript),
+    });
 
     useEffect(() => {
         scrollRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -88,7 +97,7 @@ export default function ChatPage() {
                             const event: SSEEvent = JSON.parse(line.slice(6));
 
                             if (event.type === "chunk" && typeof event.content === "string") {
-                                fullContent += event.content;
+                                fullContent += stripXmlTags(event.content);
                                 setMessages((prev) => {
                                     const updated = [...prev];
                                     updated[updated.length - 1] = {
@@ -195,12 +204,25 @@ export default function ChatPage() {
                                         <p className="text-xs text-muted-foreground mb-1">
                                             {msg.role === "user" ? "أنت" : "الشيخ ابن باز (AI)"}
                                         </p>
-                                        <div className="whitespace-pre-wrap leading-relaxed">
+                                        <div className="leading-relaxed">
                                             {msg.loading && !msg.content ? (
                                                 <ThinkingDots />
                                             ) : (
                                                 <>
-                                                    {msg.content}
+                                                    <div
+                                                        className="arabic-markdown font-[family-name:var(--font-amiri)] leading-loose"
+                                                        dir="rtl"
+                                                    >
+                                                        <ReactMarkdown
+                                                            remarkPlugins={[remarkGfm]}
+                                                            components={{
+                                                                // Disable auto-link parsing — AI output shouldn't generate external links
+                                                                a: ({ children }) => <>{children}</>,
+                                                            }}
+                                                        >
+                                                            {msg.content}
+                                                        </ReactMarkdown>
+                                                    </div>
                                                     {msg.loading && (
                                                         <span className="inline-block w-0.5 h-[1.1em] bg-emerald-400 animate-pulse align-middle mx-0.5 rounded-sm" />
                                                     )}
@@ -262,6 +284,11 @@ export default function ChatPage() {
                                                         </div>
                                                     </div>
                                                 )}
+
+                                                {/* Hadith Citations */}
+                                                {msg.metadata.hadith_citations && msg.metadata.hadith_citations.length > 0 && (
+                                                    <HadithBlock citations={msg.metadata.hadith_citations} />
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -275,10 +302,27 @@ export default function ChatPage() {
                 {/* Input */}
                 <div className="p-4 border-t border-border/40">
                     <div className="flex gap-2">
+                        {/* Mic button — Web Speech API voice input */}
+                        {isSupported && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                onClick={isListening ? stop : start}
+                                disabled={isLoading}
+                                className={isListening
+                                    ? "border-red-500 text-red-400 hover:bg-red-950/30 animate-pulse"
+                                    : "border-border/40 text-muted-foreground hover:text-foreground"
+                                }
+                                title={isListening ? "إيقاف التسجيل" : "تحدث بسؤالك"}
+                            >
+                                {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                            </Button>
+                        )}
                         <Input
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            placeholder="اكتب سؤالك هنا..."
+                            placeholder={isListening ? "جاري الاستماع..." : "اكتب سؤالك هنا..."}
                             className="text-right"
                             disabled={isLoading}
                             onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}

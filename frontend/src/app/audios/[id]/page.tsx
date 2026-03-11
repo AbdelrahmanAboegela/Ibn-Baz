@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { NestedQA } from "@/components/content/NestedQA";
 import { QuranBlock } from "@/components/content/QuranBlock";
+import { HadithBlock } from "@/components/content/HadithBlock";
 
 export default function AudioDetailPage() {
     const params = useParams();
@@ -103,6 +104,13 @@ export default function AudioDetailPage() {
                 {audio.quran_citations?.length > 0 && (
                     <div className="p-5 rounded-xl border border-emerald-600/20 bg-emerald-950/10">
                         <QuranBlock citations={audio.quran_citations} />
+                    </div>
+                )}
+
+                {/* Hadith Citations extracted from transcript */}
+                {audio.hadith_citations?.length > 0 && (
+                    <div className="p-5 rounded-xl border border-amber-600/20 bg-amber-950/10">
+                        <HadithBlock citations={audio.hadith_citations} />
                     </div>
                 )}
 

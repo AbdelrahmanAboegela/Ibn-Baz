@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { QuranBlock } from "@/components/content/QuranBlock";
+import { HadithBlock } from "@/components/content/HadithBlock";
 
 export default function SpeechDetailPage() {
     const params = useParams();
@@ -77,6 +78,13 @@ export default function SpeechDetailPage() {
                 {speech.quran_citations?.length > 0 && (
                     <div className="mt-8 p-5 rounded-xl border border-emerald-600/20 bg-emerald-950/10">
                         <QuranBlock citations={speech.quran_citations} />
+                    </div>
+                )}
+
+                {/* Hadith Citations — extracted from speech text */}
+                {speech.hadith_citations?.length > 0 && (
+                    <div className="mt-6 p-5 rounded-xl border border-amber-600/20 bg-amber-950/10">
+                        <HadithBlock citations={speech.hadith_citations} />
                     </div>
                 )}
 

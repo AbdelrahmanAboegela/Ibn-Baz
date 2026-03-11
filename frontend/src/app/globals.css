@@ -124,3 +124,34 @@
     @apply bg-background text-foreground;
   }
 }
+
+/*
+ * Arabic content font stack — ensures Arabic presentation forms
+ * (ﷺ U+FDFA, ﷻ U+FDFB, honorific abbreviations) render correctly
+ * on all operating systems when Amiri's web subset lacks a glyph.
+ */
+.font-arabic-content,
+[class*="font-amiri"],
+[class*="font-\[family-name\:var\(--font-amiri\)\]"] {
+  font-family:
+    var(--font-amiri),
+    "Amiri",
+    "Scheherazade New",
+    "Traditional Arabic",
+    "Noto Naskh Arabic",
+    "Arial Unicode MS",
+    "Times New Roman",
+    serif;
+}
+
+/* Markdown rendered in chat responses */
+.arabic-markdown p { margin-bottom: 0.6em; }
+.arabic-markdown strong { color: inherit; font-weight: 700; }
+.arabic-markdown ul { list-style: disc; padding-right: 1.5rem; margin-bottom: 0.6em; }
+.arabic-markdown ol { list-style: decimal; padding-right: 1.5rem; margin-bottom: 0.6em; }
+.arabic-markdown li { margin-bottom: 0.2em; }
+.arabic-markdown h1, .arabic-markdown h2, .arabic-markdown h3 {
+  font-weight: 700;
+  margin-bottom: 0.4em;
+  color: inherit;
+}

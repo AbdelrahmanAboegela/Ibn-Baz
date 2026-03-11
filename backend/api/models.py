@@ -17,6 +17,25 @@ class QuranCitation(BaseModel):
     quran_url: str = ""
 
 
+class HadithCitation(BaseModel):
+    text: str = ""                       # extracted hadith body snippet (used for dorar search)
+    collection: str = ""                 # Arabic collection name, e.g. "البخاري"
+    collector: str = ""                  # display name, e.g. "الإمام البخاري"
+    sunnah_url: str = ""                 # deep link to sunnah.com collection
+    # Verified via dorar.net (primary source):
+    verified_text: str = ""              # clean hadith text from dorar database
+    narrator: str = ""                   # رواي (companion who narrated)
+    grade: str = ""                      # e.g. "صحيح", "حسن", "ضعيف"
+    grade_level: int = 0                 # 1=sahih, 2=hasan, 3=daif, 4=mawdu/very weak
+    source_book: str = ""                # specific book, e.g. "صحيح أبي داود"
+    dorar_url: str = ""                  # direct search link on dorar.net
+    # Cross-reference from sunnah.com (secondary source, populated when API key is set):
+    sunnah_grade: str = ""               # grade from sunnah.com scholars
+    sunnah_text_en: str = ""             # English translation from sunnah.com
+    # Additional reference links:
+    islamweb_url: str = ""               # islamweb.net search link
+
+
 class FatwaBrief(BaseModel):
     """Compact fatwa for list views."""
     fatwa_id: int
@@ -41,6 +60,7 @@ class FatwaFull(BaseModel):
     related_ids: list[int] = []
     audio_url: str = ""
     quran_citations: list[QuranCitation] = []
+    hadith_citations: list[HadithCitation] = []
 
 
 class RelatedFatwa(BaseModel):
@@ -110,6 +130,7 @@ class ChatResponse(BaseModel):
     confidence: float = 0.0
     cited_fatwas: list[CitedFatwa] = []
     quran_citations: list[QuranCitation] = []
+    hadith_citations: list[HadithCitation] = []
     related_fatwas: list[RelatedFatwa] = []
     query_time_ms: float = 0.0
 

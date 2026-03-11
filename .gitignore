@@ -7,6 +7,7 @@ qdrant_data/
 
 # SQLite
 content.db
+*.db
 *.db-journal
 
 # Data & Outputs (Scraper)
@@ -53,6 +54,12 @@ data/speech.jsonl
 data/book.jsonl
 data/enriched_fatwas.jsonl
 data/quran_verses.json
+data/qdrant/
+
+# Scratch / temp outputs
+backend/*.txt
+backend/*.json
+backend/server.log
 
 # Node (frontend)
 node_modules/

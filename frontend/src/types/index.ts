@@ -9,6 +9,25 @@ export interface QuranCitation {
     quran_url: string;
 }
 
+export interface HadithCitation {
+    text: string;
+    collection: string;
+    collector: string;
+    sunnah_url: string;
+    // Enriched from dorar.net (primary source):
+    verified_text?: string;
+    narrator?: string;
+    grade?: string;
+    grade_level?: number;  // 1=sahih, 2=hasan, 3=daif, 4=mawdu
+    source_book?: string;
+    dorar_url?: string;
+    // Cross-reference from sunnah.com (secondary source, optional):
+    sunnah_grade?: string;
+    sunnah_text_en?: string;
+    // Additional reference links:
+    islamweb_url?: string;
+}
+
 export interface FatwaBrief {
     fatwa_id: number;
     title: string;
@@ -31,6 +50,7 @@ export interface FatwaFull {
     related_ids: number[];
     audio_url: string;
     quran_citations: QuranCitation[];
+    hadith_citations: HadithCitation[];
 }
 
 export interface RelatedFatwa {
@@ -82,6 +102,7 @@ export interface ChatResponse {
     confidence: number;
     cited_fatwas: CitedFatwa[];
     quran_citations: QuranCitation[];
+    hadith_citations: HadithCitation[];
     related_fatwas: RelatedFatwa[];
     query_time_ms: number;
 }

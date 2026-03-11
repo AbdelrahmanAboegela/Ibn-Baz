@@ -85,5 +85,19 @@ export const api = {
 
     // ── Stats ──
     stats: () => fetchApi<any>("/api/stats"),
+
+    // ── Audio STT (Fanar-Aura-STT-1 — requires additional Fanar authorization) ──
+    audio: {
+        transcribe: async (blob: Blob): Promise<{ text: string }> => {
+            const form = new FormData();
+            form.append("file", blob, "recording.webm");
+            const res = await fetch(`${API_BASE}/api/audio/transcribe`, {
+                method: "POST",
+                body: form,
+            });
+            if (!res.ok) throw new Error(`STT error: ${res.status}`);
+            return res.json();
+        },
+    },
 };
 

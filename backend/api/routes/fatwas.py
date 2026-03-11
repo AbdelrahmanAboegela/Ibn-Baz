@@ -7,7 +7,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from api.models import FatwaBrief, FatwaFull, PaginatedResponse, QuranCitation, RelatedFatwa
+from api.models import FatwaBrief, FatwaFull, PaginatedResponse, QuranCitation, RelatedFatwa, HadithCitation
 from api.retriever import (
     get_all_categories,
     get_fatwa_by_id,
@@ -15,6 +15,7 @@ from api.retriever import (
     scroll_fatwas,
     search_fatwas,
 )
+from api.hadith_resolver import extract_citations as extract_hadith_citations
 
 router = APIRouter(prefix="/api/fatwas", tags=["Fatwas"])
 
@@ -100,6 +101,7 @@ async def get_fatwa(fatwa_id: int):
         quran_citations=[
             QuranCitation(**c) for c in fatwa.get("quran_citations", [])
         ],
+        hadith_citations=extract_hadith_citations(fatwa.get("answer", "")),
     )
 
 

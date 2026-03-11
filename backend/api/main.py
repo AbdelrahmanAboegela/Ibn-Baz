@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
-from api.routes import fatwas, content, chat, stats
+from api.routes import fatwas, content, chat, stats, audio
 
 # ──────────────────────────────── App ────────────────────────────────
 
@@ -43,6 +43,7 @@ app.include_router(fatwas.router)
 app.include_router(content.router)
 app.include_router(chat.router)
 app.include_router(stats.router)
+app.include_router(audio.router)
 
 
 # ──────────────────────────────── Health ────────────────────────────────
