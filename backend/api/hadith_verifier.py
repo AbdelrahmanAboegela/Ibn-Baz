@@ -14,7 +14,7 @@ Workflow:
 Reference links always provided (no API needed):
   dorar_url    → https://dorar.net/hadith?q={text}
   sunnah_url   → https://sunnah.com/{slug}:{seq}  (if source known)
-  islamweb_url → https://www.islamweb.net/hadithen/result.php?keywords={text}
+  islamweb_url → https://www.islamweb.net/hadith/result.php?keywords={text}
 """
 import os
 import re
@@ -32,7 +32,7 @@ from api.models import HadithCitation
 _DORAR_API    = "https://dorar.net/hadith/api"
 _DORAR_SEARCH = "https://dorar.net/hadith/search?searchType=word&st=w&test=1&q="
 _SUNNAH_API   = "https://api.sunnah.com/v1"
-_ISLAMWEB_SEARCH = "https://www.islamweb.net/hadithen/result.php?language=A&keywords="
+_ISLAMWEB_SEARCH = "https://www.islamweb.net/hadith/result.php?language=A&keywords="
 
 # sunnah.com API key — set SUNNAH_API_KEY env var to enable enrichment
 _SUNNAH_KEY = os.getenv("SUNNAH_API_KEY", "")
