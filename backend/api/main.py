@@ -1,9 +1,10 @@
 """
 main.py
 FastAPI application assembly.
-Run with: uvicorn api.main:app --reload --port 8000
+Run with: uvicorn api.main:app --port 8002
 """
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 # Ensure parent is in path for config
@@ -15,12 +16,25 @@ from fastapi.middleware.gzip import GZipMiddleware
 
 from api.routes import fatwas, content, chat, stats, audio
 
+# ──────────────────────────────── Lifespan ────────────────────────────────
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Eagerly initialise singletons at startup so the Qdrant file-lock is
+    # acquired once for the lifetime of the process (not re-acquired per request).
+    from api.retriever import get_qdrant_client, get_embed_model
+    get_qdrant_client()
+    get_embed_model()
+    yield
+    # Nothing to clean up — QdrantClient releases the lock when the process exits.
+
 # ──────────────────────────────── App ────────────────────────────────
 
 app = FastAPI(
     title="مكتبة الشيخ ابن باز — API",
     description="API for Sheikh Ibn Baz's fatwas, articles, books, speeches, and RAG chatbot.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # ──────────────────────────────── CORS ────────────────────────────────

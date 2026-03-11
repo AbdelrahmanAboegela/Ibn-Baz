@@ -22,7 +22,7 @@ foreach ($port in 8002, 3000) {
 Write-Host ""
 Write-Host "  Starting backend  (http://localhost:8002) ..." -ForegroundColor Green
 Start-Process pwsh -ArgumentList "-NoExit", "-Command", `
-    "Set-Location '$root\backend'; uvicorn api.main:app --reload --host 0.0.0.0 --port 8002" `
+    "Set-Location '$root\backend'; uvicorn api.main:app --host 0.0.0.0 --port 8002" `
     -WindowStyle Normal
 
 Start-Sleep -Seconds 3
