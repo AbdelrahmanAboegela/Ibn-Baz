@@ -173,18 +173,19 @@ async def _enrich_sunnah(source: str, sequence: str, api_key: str) -> Optional[d
 
 # ── Enrichment & aggregation ─────────────────────────────────────────────────
 
-def _build_urls(text: str, source: str, sequence: str) -> tuple[str, str, str]:
-    """Build dorar_url, sunnah_url, islamweb_url for a citation."""
-    enc = urllib.parse.quote(text[:80], safe="")
-    dorar_url    = (_DORAR_SEARCH + enc) if text else ""
-    islamweb_url = (_ISLAMWEB_SEARCH + enc) if text else ""
+def _build_urls(text: str, source: str, sequence: str) -> tuple[str, str]:
+    """Build dorar_url and sunnah_url for a citation."""
+    enc = urllib.parse.quote(text[:120], safe="")
+    dorar_url = (_DORAR_SEARCH + enc) if text else ""
 
     slug = _SOURCE_TO_SUNNAH.get(source, "")
-    if slug and sequence:
-        sunnah_url = f"https://sunnah.com/{slug}:{sequence}"
+    # sunnah.com sequence must be a plain number (not volume/page like "4/221")
+    plain_seq = sequence.strip()
+    if slug and plain_seq and plain_seq.isdigit():
+        sunnah_url = f"https://sunnah.com/{slug}:{plain_seq}"
     else:
-        sunnah_url = ""  # Don't link to bare collection — unhelpful without a hadith number
-    return dorar_url, sunnah_url, islamweb_url
+        sunnah_url = ""  # Don't link without a valid hadith number
+    return dorar_url, sunnah_url
 
 
 def _enrich(citation: HadithCitation, dorar_result: dict,
@@ -202,9 +203,10 @@ def _enrich(citation: HadithCitation, dorar_result: dict,
         clean_txt = narrator = grade_str = source = sequence = ""
         deg_cat = 0
 
-    dorar_url, sunnah_url, islamweb_url = _build_urls(
-        citation.text, source, sequence
-    )
+    # Use the verified API text for the dorar search URL (much more precise than
+    # the user's query fragment — narrows the search to 1-2 narrations instead of many)
+    dorar_search_text = clean_txt if clean_txt else citation.text
+    dorar_url, sunnah_url = _build_urls(dorar_search_text, source, sequence)
 
     return HadithCitation(
         text           = citation.text,
@@ -217,7 +219,7 @@ def _enrich(citation: HadithCitation, dorar_result: dict,
         grade_level    = deg_cat if clean_txt else 0,
         source_book    = source if clean_txt else "",
         dorar_url      = dorar_url,
-        islamweb_url   = islamweb_url,
+        islamweb_url   = "",
         # sunnah.com cross-reference (populated only when API key is configured)
         sunnah_grade   = (sunnah_data or {}).get("grade_en", ""),
         sunnah_text_en = (sunnah_data or {}).get("text_en", ""),
@@ -260,12 +262,12 @@ async def enrich_citations(citations: list[HadithCitation]) -> list[HadithCitati
         if isinstance(dorar_res, dict) and dorar_res:
             enriched.append(_enrich(citation, dorar_res, sunnah_data))
         else:
-            # dorar unavailable — still provide search links
-            dorar_url, sunnah_url, islamweb_url = _build_urls(citation.text, "", "")
+            # dorar unavailable — still provide search link
+            dorar_url, sunnah_url = _build_urls(citation.text, "", "")
             enriched.append(citation.model_copy(update={
                 "dorar_url":    dorar_url,
                 "sunnah_url":   sunnah_url or citation.sunnah_url,
-                "islamweb_url": islamweb_url,
+                "islamweb_url": "",
             }))
 
     # ── Post-enrichment dedup by normalized text ─────────────────────────────

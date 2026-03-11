@@ -12,7 +12,7 @@ from api.generator import generate, generate_stream, RetrievalContext
 from api.hadith_resolver import extract_citations as extract_hadith_citations
 from api.hadith_verifier import (
     enrich_citations, _search_one, _strip_html, _normalize,
-    _SOURCE_TO_SUNNAH, _ISLAMWEB_SEARCH,
+    _SOURCE_TO_SUNNAH, _DORAR_SEARCH,
 )
 from api.models import (
     ChatResponse,
@@ -171,9 +171,11 @@ def _build_hadith_verdict_response(
 
     # Build the HadithCitation for the block
     slug = _SOURCE_TO_SUNNAH.get(source, "")
-    sunnah_url = (f"https://sunnah.com/{slug}:{seq}" if slug and seq else "")
-    dorar_url    = "https://dorar.net/hadith/search?searchType=word&st=w&test=1&q=" + urllib.parse.quote(query_text[:80], safe="")
-    islamweb_url = _ISLAMWEB_SEARCH + urllib.parse.quote(query_text[:80], safe="")
+    plain_seq = seq.strip() if seq else ""
+    sunnah_url = (f"https://sunnah.com/{slug}:{plain_seq}" if slug and plain_seq and plain_seq.isdigit() else "")
+    # Use verified text for precise dorar search (shows the specific narration)
+    dorar_search = verified if verified else query_text
+    dorar_url = _DORAR_SEARCH + urllib.parse.quote(dorar_search[:120], safe="")
 
     citation = HadithCitation(
         text          = query_text,
@@ -185,7 +187,7 @@ def _build_hadith_verdict_response(
         grade         = grade,
         grade_level   = deg_cat,
         source_book   = source,
-        islamweb_url  = islamweb_url,
+        islamweb_url  = "",
         dorar_url     = dorar_url,
     )
 

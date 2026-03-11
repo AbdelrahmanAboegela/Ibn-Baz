@@ -2,7 +2,7 @@
  * HadithBlock — renders structured hadith citations detected in the AI answer.
  * Shows the hadith text (verified via dorar.net when available), narrator,
  * authenticity grade badge (colour-coded), English translation (from sunnah.com
- * when available), and links to dorar.net, sunnah.com, and islamweb.net.
+ * when available), and links to dorar.net (precise search) and sunnah.com (direct page).
  */
 
 import { HadithCitation } from "@/types";
@@ -130,16 +130,6 @@ export function HadithBlock({ citations, compact = false }: HadithBlockProps) {
                                         className="text-xs text-amber-500/70 hover:text-amber-400 hover:underline transition-colors"
                                     >
                                         sunnah.com ↗
-                                    </a>
-                                )}
-                                {c.islamweb_url && (
-                                    <a
-                                        href={c.islamweb_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs text-amber-500/50 hover:text-amber-400 hover:underline transition-colors"
-                                    >
-                                        islamweb ↗
                                     </a>
                                 )}
                             </div>
