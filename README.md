@@ -10,7 +10,7 @@ An Arabic RAG (Retrieval-Augmented Generation) application containing the comple
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org)
 [![Qdrant](https://img.shields.io/badge/Qdrant-1.12+-red?style=flat-square)](https://qdrant.tech)
-[![Groq](https://img.shields.io/badge/Groq-LLaMA_70B-orange?style=flat-square)](https://groq.com)
+[![Fanar](https://img.shields.io/badge/Fanar-Sadiq_Arabic_LLM-6366f1?style=flat-square)](https://fanar.qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
 </div>
@@ -72,15 +72,19 @@ His collected works, **مجموع فتاوى ابن باز** (*Majmu' Fatawa Ibn
 | Feature | Description |
 |---|---|
 | 🔍 **Semantic Fatwa Search** | Search 24,601 fatwas using multilingual embeddings (`intfloat/multilingual-e5-base`, 768d) with optional category filtering |
-| 🤖 **AI Chatbot** | Ask questions in Arabic and get structured answers grounded strictly in Ibn Baz's fatwas via Groq LLaMA 3.3 70B — the LLM is instructed not to generate anything outside the retrieved fatwa context |
-| 📖 **Quran Grounding** | Every AI answer cites verified Quranic verses (6,236 verses from AlQuran Cloud API) with links to quran.com |
+| 🤖 **AI Chatbot** | Ask questions in Arabic and get structured answers grounded strictly in Ibn Baz's fatwas via **Fanar Sadiq** (Arabic-native LLM) — instructed never to generate content outside the retrieved fatwa context |
+| 📜 **Hadith Verification** | Detects hadith citations in every AI answer and verifies them against **dorar.net** (grade + narrator + source), **sunnah.com** (English translation + cross-grade), and **islamweb.net** — displayed in colour-coded citation cards |
+| ⚡ **Hadith Fast-Path** | Queries like «صحة حديث X» bypass the LLM entirely — dorar.net is queried directly and the verified grade (صحيح / حسن / ضعيف / موضوع) is returned with zero hallucination risk |
+| 🎤 **Voice Input** | Microphone button in the chat interface uses the browser Web Speech API for Arabic dictation |
+| 📖 **Quran Grounding** | Every AI answer cites verified Quranic verses (6,236 verses) with surah/ayah references |
 | 🕸️ **Graph-Enhanced RAG** | 73,803 fatwa-to-fatwa citation edges used for graph expansion during retrieval — relevant related fatwas are surfaced automatically |
 | 🎧 **Audio Player** | 80.5% of fatwas have original audio recordings; built-in HTML5 player on each fatwa detail page |
 | 📚 **Full Library** | Books (286 PDFs), Articles (169), Speeches (298), Discussions (133), Audio recordings (3,475) |
 | 🗂️ **Category Filtering** | Browse fatwas across 221 unique Islamic topic categories |
 | ↗️ **SSE Streaming** | Real-time answer streaming via Server-Sent Events with automatic non-streaming fallback |
+| ✍️ **Markdown Rendering** | AI responses render bold, lists, and headings via ReactMarkdown + remark-gfm |
 | 🧩 **Nested Q&A** | Fatwas with follow-up س/ج pairs are parsed and displayed as structured nested dialogs |
-| 🌙 **Arabic-First UI** | Full RTL layout, dark mode, Amiri + Noto Kufi Arabic fonts, mobile-responsive |
+| 🌙 **Arabic-First UI** | Full RTL layout, dark mode, Amiri font with full Arabic honorific fallback stack (ﷺ renders correctly on all OSes), mobile-responsive |
 
 ---
 
@@ -92,15 +96,21 @@ graph TD
     Frontend -->|"REST / SSE"| Backend["🐍 FastAPI\n(backend :8000)"]
     Backend --> QdrantDB[("🔴 Qdrant (local)\n24,601 fatwa vectors\n768d dense cosine")]
     Backend --> SQLite[("🗄️ SQLite (WAL)\nArticles · Books\nSpeeches · Discussions")]
-    Backend --> Groq["☁️ Groq API\nllama-3.3-70b-versatile"]
+    Backend --> Fanar["☁️ Fanar API\nFanar-Sadiq (Arabic LLM)"]
+    Backend --> Dorar["🌐 dorar.net API\nHadith grading + text"]
+    Backend --> Sunnah["🌐 sunnah.com API\nEnglish translation + grade"]
     Backend --> Embedder["🤗 multilingual-e5-base\n(local, CPU/GPU)"]
 
     subgraph "RAG Pipeline (rag_pipeline.py)"
-        Q["User Query"] --> E["Embed with E5\n(query: prefix)"]
+        Q["User Query"] --> HD{"Hadith query?\n(صحة حديث X)"}
+        HD -->|"Yes"| FAST["dorar.net fast-path\n(LLM bypassed)"]
+        HD -->|"No"| E["Embed with E5\n(query: prefix)"]
         E --> S["Qdrant Dense Search\ntop-k fatwas"]
         S --> G["Graph Expansion\nrelated_ids → fetch neighbours"]
         G --> QR["Collect Quran Citations\nfrom payloads"]
-        QR --> LLM["Groq LLM\nGenerate Arabic answer\n(system + fatwas context)"]
+        QR --> LLM["Fanar Sadiq LLM\nGenerate Arabic answer\n(system + fatwas context)"]
+        LLM --> HR["hadith_resolver.py\nDetect citations in answer"]
+        HR --> HV["hadith_verifier.py\nEnrich via dorar + sunnah"]
     end
 ```
 
@@ -112,10 +122,11 @@ graph TD
 |---|---|---|---|
 | **Embedding** | `intfloat/multilingual-e5-base` | — | Query & fatwa encoding (768-dim dense vectors) |
 | **Vector DB** | Qdrant (local file mode) | ≥1.12 | Dense semantic search + graph traversal via `related_ids` |
-| **LLM** | Groq `llama-3.3-70b-versatile` | — | Arabic answer generation (direct API, no structured output) |
+| **LLM** | Fanar `Fanar-Sadiq` (Arabic-native) | — | Arabic answer generation via OpenAI-compatible Fanar API |
+| **Hadith APIs** | dorar.net · sunnah.com · islamweb.net | — | Multi-provider hadith grading and enrichment |
 | **Backend** | FastAPI + uvicorn | ≥0.115 | REST API with GZip + CORS middleware |
 | **Content DB** | SQLite (WAL mode) | built-in | Articles, books, speeches, discussions |
-| **HTTP client** | httpx, aiohttp | ≥0.27 | Async HTTP for Groq + AlQuran API |
+| **HTTP client** | httpx, aiohttp | ≥0.27 | Async HTTP for Fanar API + hadith providers |
 | **Scraper** | Scrapling + requests | — | Anti-bot-safe HTML scraping of binbaz.org.sa |
 | **Frontend** | Next.js 16 + React 19 | 16.1.6 | RTL Arabic UI with SSE streaming |
 | **UI Components** | shadcn/ui + Radix UI | — | Cards, badges, sheets, scroll areas |
@@ -133,12 +144,16 @@ ibn-baz/
 │   │   ├── main.py              # FastAPI app: CORS, GZip, route registration, /health
 │   │   ├── models.py            # Pydantic schemas (FatwaBrief, FatwaFull, ChatRequest, ChatResponse…)
 │   │   ├── retriever.py         # Qdrant: embed_query, search_fatwas, scroll_fatwas, get_related_fatwas
-│   │   ├── generator.py         # Groq direct API: prompt builder + generate() → RAGResponse
+│   │   ├── generator.py         # Fanar API: prompt builder + generate() → RAGResponse
+│   │   ├── hadith_verifier.py   # Multi-provider hadith grading: dorar.net → sunnah.com → islamweb.net
+│   │   ├── hadith_resolver.py   # Extracts hadith citations from LLM answer text (5 extraction strategies)
+│   │   ├── audio.py             # /api/audio/transcribe — Arabic speech-to-text via Fanar Whisper
 │   │   ├── rag_pipeline.py      # Orchestrates: retrieve → graph expand → Quran citations → generate
 │   │   └── routes/
 │   │       ├── fatwas.py        # GET /api/fatwas  /api/fatwas/{id}  /api/fatwas/{id}/related  /api/fatwas/categories
 │   │       ├── content.py       # GET /api/articles  /api/books  /api/speeches  /api/discussions  (+ /{id})
 │   │       ├── chat.py          # POST /api/chat  POST /api/chat/stream (SSE)
+│   │       ├── audio.py         # POST /api/audio/transcribe (Arabic voice input)
 │   │       └── stats.py         # GET /api/stats
 │   ├── scripts/
 │   │   ├── 01_download_quran.py   # Fetches 6,236 Quran verses from AlQuran Cloud → data/quran_verses.json
@@ -184,7 +199,10 @@ ibn-baz/
 │   │   │   │   └── Footer.tsx
 │   │   │   ├── content/
 │   │   │   │   ├── NestedQA.tsx   # Renders nested س/ج Q&A pairs inside fatwa answers
-│   │   │   │   └── QuranBlock.tsx # Displays verified Quran verses with quran.com links
+│   │   │   │   ├── QuranBlock.tsx # Displays verified Quran verses with quran.com links
+│   │   │   │   └── HadithBlock.tsx# Colour-coded hadith citation cards (grade badge + 3 source links)
+│   │   ├── hooks/
+│   │   │   └── useVoiceInput.ts   # Web Speech API hook — Arabic dictation for chat input
 │   │   │   └── ui/                # shadcn/ui components (Card, Badge, Button, Input, etc.)
 │   │   ├── lib/
 │   │   │   ├── api.ts             # Typed API client: fatwas, articles, books, speeches, discussions, chat, stats
@@ -270,7 +288,8 @@ Each fatwa record in `fatwa.jsonl` / `enriched_fatwas.jsonl` has:
 - Python 3.11+
 - Node.js 20+
 - 4 GB RAM minimum (embedding model loads into memory)
-- A free [Groq API key](https://console.groq.com)
+- A [Fanar API key](https://fanar.qa) — Arabic-native LLM powering the chatbot
+- *(Optional)* A [sunnah.com API key](https://sunnah.com/developers) — enables English hadith translations
 
 ### 1 — Clone & configure
 
@@ -287,9 +306,9 @@ cp backend/.env.example backend/.env
 
 ```env
 # backend/.env
-GROQ_API_KEY=gsk_...          # Required — get from console.groq.com
-GROQ_API_KEY_2=               # Optional additional key for rotation
-GROQ_MODEL=llama-3.3-70b-versatile
+FANAR_API_KEY=...              # Required — Fanar Arabic LLM (https://fanar.qa)
+
+SUNNAH_API_KEY=...             # Optional — enables English hadith translations from sunnah.com
 
 EMBEDDING_MODEL=intfloat/multilingual-e5-base
 QDRANT_COLLECTION=fatwas
@@ -432,10 +451,11 @@ Returns `ChatResponse`:
 
 | Field | Type | Description |
 |---|---|---|
-| `answer` | string | Full Arabic answer from LLaMA 70B |
+| `answer` | string | Full Arabic answer from Fanar Sadiq |
 | `confidence` | float | Top retrieval score (0–1) |
 | `cited_fatwas` | CitedFatwa[] | Fatwa IDs, titles, source refs, relevance scores |
 | `quran_citations` | QuranCitation[] | Verified verses from retrieved fatwas |
+| `hadith_citations` | HadithCitation[] | Verified hadith results from dorar.net + sunnah.com enrichment |
 | `related_fatwas` | RelatedFatwa[] | Graph-expanded neighbour fatwas |
 | `query_time_ms` | float | Total pipeline latency |
 
@@ -455,6 +475,19 @@ Returns `text/event-stream` with SSE events:
 | `metadata` | Full `ChatResponse` JSON after streaming finishes |
 | `done` | Empty — stream ended |
 | `error` | Error message string |
+
+---
+
+### Audio Transcription (Voice Input)
+
+```http
+POST /api/audio/transcribe
+Content-Type: multipart/form-data
+
+file=<audio_blob>
+```
+
+Returns `{ "text": "..." }` — Arabic transcript of the uploaded audio. Used by the chat UI's microphone button to convert recorded speech to text before sending to `/api/chat`.
 
 ---
 
@@ -485,15 +518,72 @@ The graph follows a power-law degree distribution (scale-free) — a small numbe
 
 ---
 
-## ⚙️ Configuration
+## 📜 Hadith Verification
+
+When a user asks about a hadith (e.g. «صحة حديث X» or «هل صح الحديث ...»), the pipeline takes two different paths depending on context:
+
+### Fast-path (direct hadith authenticity queries)
+
+If the query matches the pattern of a direct hadith authenticity question, the LLM is **bypassed entirely**:
+
+1. The hadith text is extracted from the query
+2. **dorar.net** is queried directly via its search API
+3. The grade (صحيح / حسن / ضعيف / موضوع), narrator chain, and source are returned
+4. The response is generated deterministically — no hallucination risk
+
+### Normal-path (hadith cited inside a fatwa answer)
+
+For all other queries the normal RAG pipeline runs, but after the LLM generates its answer:
+
+1. **`hadith_resolver.py`** scans the answer text using 5 extraction strategies (prophetic-speech markers, trigger verbs, direct collection references, parenthetical quotes, standalone متفق عليه)
+2. **`hadith_verifier.py`** sends each extracted snippet to **dorar.net** → **sunnah.com** → **islamweb.net** in parallel via `asyncio.gather`
+3. Results are deduplicated and enriched with grade badge colour, narrator, source collection, English translation (when sunnah.com key available), and external links
+
+### HadithBlock UI
+
+Each verified hadith is displayed in a colour-coded card in the frontend:
+
+| Grade | Badge colour |
+|---|---|
+| صحيح | 🟢 Green |
+| حسن | 🔵 Blue |
+| ضعيف | 🟡 Yellow |
+| موضوع / منكر | 🔴 Red |
+
+Each card links to:
+- **dorar.net** — Arabic full chain + ruling (always shown)
+- **sunnah.com** — English translation with book:hadith number (shown only when a sequence number is known)
+- **islamweb.net** — Arabic hadith fatwa search
+
+### dorar.net search URL format
+
+```
+https://dorar.net/hadith/search?searchType=word&st=w&test=1&q={encoded_hadith_text}
+```
+
+> ⚠️ The older `/hadith?q=` endpoint is incorrect and redirects to the homepage. Always use `/hadith/search` with `searchType=word&st=w&test=1`.
+
+---
+
+## 🎤 Voice Input
+
+The chat interface includes a microphone button that uses the **Web Speech API** (`webkitSpeechRecognition`) for Arabic dictation:
+
+- Language is set to `ar-SA` (Saudi Arabic)
+- Recognised text is appended to the current chat input field
+- Works in Chrome/Edge; Safari and Firefox require fallback (button hidden automatically if API is unavailable)
+- Implemented in `frontend/src/hooks/useVoiceInput.ts`
+
+---
+
+
 
 ### Backend (`backend/.env`)
 
 | Variable | Default | Description |
 |---|---|---|
-| `GROQ_API_KEY` | — | **Required.** Primary Groq API key |
-| `GROQ_API_KEY_2` … `GROQ_API_KEY_5` | — | Optional additional keys for rate-limit rotation |
-| `GROQ_MODEL` | `llama-3.3-70b-versatile` | Groq model name |
+| `FANAR_API_KEY` | — | **Required.** Fanar Arabic LLM API key |
+| `SUNNAH_API_KEY` | — | Optional — sunnah.com key for English hadith translations |
 | `EMBEDDING_MODEL` | `intfloat/multilingual-e5-base` | HuggingFace sentence-transformer model |
 | `HF_HOME` | `~/.cache/huggingface` | HuggingFace model cache directory |
 | `QDRANT_PATH` | `./qdrant_data` | Local Qdrant storage directory |
