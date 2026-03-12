@@ -137,9 +137,9 @@ _PROPHETIC = re.compile(
 
 # ── Pattern 2: Trigger verbs ──────────────────────────────────────────────────
 # "رواه البخاري", "رواه الإمام مسلم", "روى مسلم في صحيحه", "أخرجه مسلم", "علقه البخاري" etc.
-# Also: "يروى عن النبي ﷺ", "ذكر ذلك البخاري"
+# Also: "يروى عن النبي ﷺ", "ذكر ذلك البخاري", "متفق على صحته"
 _TRIGGER = re.compile(
-    r'(?:رواه|روى|يروى|أخرجه|خرّجه|خرجه|أخرج|صحّحه|صححه|ذكره|ذكر\s+ذلك|نقله|حسّنه|حسنه|علّقه|علقه)\s+',
+    r'(?:رواه|روى|يروى|أخرجه|خرّجه|خرجه|أخرج|صحّحه|صححه|ذكره|ذكر\s+ذلك|نقله|حسّنه|حسنه|علّقه|علقه|متفق\s+على|متفق\s+عليه)\s+',
     re.UNICODE,
 )
 # Honorary prefix "الإمام" sometimes separates trigger from collection name
@@ -167,7 +167,12 @@ _DIRECT: list[tuple] = [
     (re.compile(r'(?:علقه|علّقه)\s+(?:الإمام\s+)?البخاري[^:،؛\n]{0,60}:\s*', re.UNICODE), "صحيح البخاري", "الإمام البخاري", "bukhari"),
     # "ثبت في الصحيحين عن X قال: TEXT"
     (re.compile(r'ثبت\s+في\s+الصحيحين',                                    re.UNICODE), "الصحيحين",     "البخاري ومسلم",    "bukhari"),
-    # "كما صحت بذلك الأحاديث المتواترة" — doesn't give specific hadith text, skip
+    # "وفي البخاري من حديث X" — variant of direct reference
+    (re.compile(r'(?:وفي|في)\s+البخاري\s+من\s+حديث',                       re.UNICODE), "صحيح البخاري", "الإمام البخاري",   "bukhari"),
+    (re.compile(r'(?:وفي|في)\s+مسلم\s+من\s+حديث',                          re.UNICODE), "صحيح مسلم",    "الإمام مسلم",      "muslim"),
+    # "وفي صحيحه" after explicit collection name context
+    (re.compile(r'وفي\s+صحيح(?:ه|ه؟)',                                      re.UNICODE), "صحيح البخاري", "الإمام البخاري",   "bukhari"),
+    # كما يصرح بهذا الحديث — rare but worth catching
 ]
 
 # ── Pattern 4: Parenthetical attribution ─────────────────────────────────────
@@ -176,8 +181,20 @@ _PAREN_ATTR = re.compile(
     re.UNICODE,
 )
 
-# ── Pattern 5: Standalone متفق عليه ──────────────────────────────────────────
+# ── Pattern 5: Standalone متفق عليه + block-style hadiths ─────────────────────
+# "متفق عليه" can appear on its own line after a hadith block
 _MUTTAFAQ = re.compile(r'متفق\s+عليه', re.UNICODE)
+
+# Pattern 5b: Detect standalone collection names appearing on their own lines
+# This handles cases like a hadith on one line followed by "الإمام مسلم" on the next
+_COLLECTION_LINE = re.compile(
+    r'\n\s*(?:الإمام\s+)?'
+    r'(?:(?:صحيح\s+)?البخاري|(?:صحيح\s+)?مسلم|الصحيحين|متفق\s+عليه|'
+    r'(?:سنن\s+)?(?:أبي?\s+داود|الترمذي|النسائي|ابن\s+ماج[هة]|أحمد)|'
+    r'(?:مسند\s+)?أحمد|(?:موطأ?\s+)?مالك|البيهقي|الطبراني|الحاكم|الدارقطني)'
+    r'(?:\s+|$)',
+    re.UNICODE,
+)
 
 
 def _make(text: str, collection: str, collector: str, slug: str) -> HadithCitation:
@@ -272,6 +289,20 @@ def extract_citations(answer: str) -> list[HadithCitation]:
     for m in _MUTTAFAQ.finditer(answer):
         snippet = _snippet_before(answer, m.start())
         _add(m.start(), _make(snippet, "متفق عليه", "البخاري ومسلم", "bukhari"))
+
+    # 6. Block-style: hadith on one line, collection name on next line
+    # e.g.: "من أحدث في أمرنا هذا ما ليس منه فهو رد\nالإمام مسلم"
+    for m in _COLLECTION_LINE.finditer(answer):
+        line_text = m.group(0).strip()
+        # Extract which collection this refers to
+        info = _collection_for(line_text)
+        if info:
+            kw, collector, slug = info
+            # Get the hadith text from previous line (before the newline)
+            pre = answer[:m.start()]
+            # Find the last sentence boundary before this line
+            snippet = _snippet_before(answer, m.start())
+            _add(m.start(), _make(snippet, kw, collector, slug))
 
     hits.sort(key=lambda x: x[0])
     return [h for _, h in hits]
