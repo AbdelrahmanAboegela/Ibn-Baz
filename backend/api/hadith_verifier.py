@@ -100,6 +100,38 @@ def _word_overlap_score(a: str, b: str, min_len: int = 3) -> int:
     return len(a_words & b_words)
 
 
+def _grade_score(degree_cat: int, degree_str: str) -> int:
+    """
+    Assign a numeric score for grading (lower = better, for sorting).
+    
+    Hierarchy (dorar's degree_cat + keyword detection):
+      0: صحيح / حسن صحيح / متواتر / صحيح الإسناد
+      1: حسن / حسن غريب
+      2: صحيح لغيره / حسن لغيره / لا بأس به
+      3: ضعيف / ضعيف جداً / ضعيف الإسناد
+      4: ضعيف جداً / منكر / لا يصح / ليس بمحفوظ / باطل / موضوع
+      99: unknown
+    """
+    degree_str = (degree_str or "").strip()
+    
+    # Keywords ranked by strength (صحيح > حسن > ضعيف > لا يصح/موضوع)
+    if any(kw in degree_str for kw in ["صحيح الإسناد", "متواتر", "صحيح جداً", "حسن صحيح"]):
+        return 0
+    elif any(kw in degree_str for kw in ["صحيح", "أخرجه في صحيحه"]):
+        return 0
+    elif any(kw in degree_str for kw in ["حسن"]):
+        return 1
+    elif any(kw in degree_str for kw in ["لغيره", "لا بأس"]):
+        return 2
+    elif any(kw in degree_str for kw in ["ضعيف"]):
+        return 3
+    elif any(kw in degree_str for kw in ["ليس بمحفوظ", "لا يصح", "موضوع", "باطل", "منكر", "واهٍ"]):
+        return 4
+    else:
+        # Fallback to API's degree_cat
+        return degree_cat if degree_cat <= 4 else 99
+
+
 # ── Provider 1: dorar.net ────────────────────────────────────────────────────
 
 async def _search_one(snippet: str) -> Optional[dict]:
@@ -107,7 +139,9 @@ async def _search_one(snippet: str) -> Optional[dict]:
     Search dorar.net for a hadith by text snippet.
     Returns the best word-overlap matching result or None.
     """
-    query = snippet[:80].strip()
+    # Use up to 120 chars for better matching on longer hadiths.
+    # Dorar works better with more text context.
+    query = snippet[:120].strip()
     if len(query) < 8:
         return None
     try:
@@ -126,28 +160,33 @@ async def _search_one(snippet: str) -> Optional[dict]:
             query_words = {w for w in norm_query.split() if len(w) >= 3}
 
             # Collect all results that share at least one significant word with query.
-            # Tuple: (score, deg, hadith_dict)
+            # Tuple: (overlap_score, grade_score, hadith_dict)
             candidates: list[tuple[int, int, dict]] = []
             for h in ahadith:
                 clean = _strip_html(h.get("hadith", ""))
                 h_words = {w for w in _normalize(clean).split() if len(w) >= 3}
-                score = len(query_words & h_words)
-                if score > 0:
-                    deg = int(h.get("degree_cat") or 99)
-                    candidates.append((score, deg, h))
+                overlap = len(query_words & h_words)
+                if overlap > 0:
+                    deg_cat = int(h.get("degree_cat") or 99)
+                    # Degree field may contain HTML tags from dorar
+                    deg_str = _strip_html(h.get("degree", ""))
+                    grade = _grade_score(deg_cat, deg_str)
+                    candidates.append((overlap, grade, h))
 
             if not candidates:
                 return None
 
-            # Sort key: (-score, deg)
-            #   • -score ASC  → highest overlap first (most relevant topic wins)
-            #   • deg   ASC  → lowest degree_cat (best grade) breaks ties
-            # Scenario A — same hadith, multiple chains ("من كذب علي متعمدا"):
-            #   all 15 results share the same overlap score → grade breaks tie
-            #   → degree_cat=1 (صحيح) beats degree_cat=3 (موضوع) ✓
-            # Scenario B — different-topic hadiths sharing some words:
-            #   the hadith with more matching words wins on overlap
-            #   → correct topic returned regardless of grade ✓
+            # Sort key: (-overlap, grade)
+            #   • -overlap DESC  → highest overlap first (most relevant topic wins)
+            #   • grade   ASC   → lowest grade_score (best grading) breaks ties
+            #
+            # This handles:
+            # A) Same hadith, multiple chains: all 15 results share same overlap
+            #    → grade breaks tie → صحيح beats ضعيف beats موضوع ✓
+            # B) Same hadith, different scholars' gradings: all share same overlap
+            #    → grade breaks tie → "حسن صحيح" beats "ضعيف" beats "ليس بمحفوظ" ✓
+            # C) Different topics sharing words: one has more matches
+            #    → higher overlap wins → correct hadith returned ✓
             candidates.sort(key=lambda x: (-x[0], x[1]))
             return candidates[0][2]
     except Exception:
